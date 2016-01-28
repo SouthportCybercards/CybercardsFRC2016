@@ -9,7 +9,6 @@ public:
 		rightStick(1),
 		lw(NULL),
 		chooser()
-
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontLeftMotor,false);
@@ -25,10 +24,11 @@ private:
 	const std::string autoNameDefault = "Default";
 	const std::string autoNameCustom = "My Auto";
 	std::string autoSelected;
-	Joystick leftStick, rightStick;
 
 	void RobotInit()
 	{
+		CameraServer::GetInstance()->SetQuality(100);
+		CameraServer::GetInstance()->StartAutomaticCapture("cam0");
 		chooser = new SendableChooser();
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
@@ -49,8 +49,8 @@ private:
 		autoSelected = *((std::string*)chooser->GetSelected());
 		//std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
 		std::cout << "Auto selected: " << autoSelected << std::endl;
-		Encoder *enc;
-		enc = new Encoder(/*DIO port 0, 1*/0, 1, false, Encoder::EncodingType::k4X);
+		//Encoder *enc;
+		//enc = new Encoder(/*DIO port 0, 1*/0, 1, false, Encoder::EncodingType::k4X);
 		if(autoSelected == autoNameCustom){
 			//Custom Auto goes here
 		} else {
