@@ -20,6 +20,7 @@ public:
 private:
 	RobotDrive robotDrive;
 	Joystick leftStick, rightStick;
+	AnalogInput *armEncoder;
 	LiveWindow *lw = LiveWindow::GetInstance();
 	SendableChooser *chooser;
 	const std::string autoNameDefault = "Default";
@@ -49,11 +50,11 @@ private:
 		autoSelected = *((std::string*)chooser->GetSelected());
 		//std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
 		std::cout << "Auto selected: " << autoSelected << std::endl;
-		Encoder *enc;
-		enc = new Encoder(/*DIO port 0, 1*/0, 1, false, Encoder::EncodingType::k4X);
 		if(autoSelected == autoNameCustom){
 			//Custom Auto goes here
 		} else {
+			//armEncoder = new AnalogInput(0); //port here
+			//armEncoder->
 
 
 			/*
