@@ -4,7 +4,8 @@ class Robot: public IterativeRobot
 {
 public:
 	Robot() :
-		robotDrive(9, 8, 7, 6),	// these must be initialized in the same order
+		//robotDrive(FrontLeft, RearLeft, FrontRight, RearRight)
+		robotDrive(6, 7, 9, 8),	// these must be initialized in the same order
 		leftStick(0),
 		rightStick(1),
 		lw(NULL),
@@ -20,13 +21,12 @@ public:
 private:
 	RobotDrive robotDrive;
 	Joystick leftStick, rightStick;
-	AnalogInput *armEncoder;
+	//AnalogInput *armEncoder;
 	LiveWindow *lw = LiveWindow::GetInstance();
 	SendableChooser *chooser;
 	const std::string autoNameDefault = "Default";
 	const std::string autoNameCustom = "My Auto";
 	std::string autoSelected;
-	Joystick leftStick, rightStick;
 
 	void RobotInit()
 	{
