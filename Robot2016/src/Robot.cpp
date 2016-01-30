@@ -15,6 +15,8 @@ public:
 		robotDrive.SetInvertedMotor(robotDrive.kFrontRightMotor,false);
 		robotDrive.SetInvertedMotor(robotDrive.kRearLeftMotor,false);
 		robotDrive.SetInvertedMotor(robotDrive.kRearRightMotor,false);
+		cam = new USBCamera("cam0", true);
+		armEncoder = new AnalogInput(1); //dunno channel
 	}
 private:
 	RobotDrive robotDrive;
@@ -24,13 +26,22 @@ private:
 	const std::string autoNameDefault = "Default";
 	const std::string autoNameCustom = "My Auto";
 	std::string autoSelected;
+	USBCamera *cam;
+	AnalogInput* armEncoder;
 
 	void RobotInit()
 	{
 
 		CameraServer::GetInstance()->SetQuality(100);
-		CameraServer::GetInstance()->StartAutomaticCapture("cam0");
-//remember m_ptr of the shared ptr
+		cam->OpenCamera();
+		cam->SetBrightness(10);
+		cam->SetExposureAuto();
+		cam->SetWhiteBalanceAuto();
+		cam->UpdateSettings();
+		cam->StartCapture();
+		//cool camera functions; makes it look good
+		std::shared_ptr<USBCamera> cameraptr(cam);
+		CameraServer::GetInstance()->StartAutomaticCapture(cameraptr);
 
 		chooser = new SendableChooser();
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
@@ -158,6 +169,7 @@ private:
 		}
 		return target;
 	}
+
 
 };
 
