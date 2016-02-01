@@ -4,32 +4,45 @@ class Robot: public IterativeRobot
 {
 public:
 	Robot() :
-		//robotDrive(FrontLeft, RearLeft, FrontRight, RearRight)
 		robotDrive(6, 7, 9, 8),	// these must be initialized in the same order
 		leftStick(0),
 		rightStick(1),
 		lw(NULL),
 		chooser()
-
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontLeftMotor,false);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontRightMotor,false);
 		robotDrive.SetInvertedMotor(robotDrive.kRearLeftMotor,false);
 		robotDrive.SetInvertedMotor(robotDrive.kRearRightMotor,false);
+		cam = new USBCamera("cam0", true);
+		armEncoder = new AnalogInput(1); //dunno channel
 	}
 private:
 	RobotDrive robotDrive;
 	Joystick leftStick, rightStick;
-	//AnalogInput *armEncoder;
 	LiveWindow *lw = LiveWindow::GetInstance();
 	SendableChooser *chooser;
 	const std::string autoNameDefault = "Default";
 	const std::string autoNameCustom = "My Auto";
 	std::string autoSelected;
+	USBCamera *cam;
+	AnalogInput* armEncoder;
 
 	void RobotInit()
 	{
+
+		CameraServer::GetInstance()->SetQuality(100);
+		cam->OpenCamera();
+		cam->SetBrightness(10);
+		cam->SetExposureAuto();
+		cam->SetWhiteBalanceAuto();
+		cam->UpdateSettings();
+		cam->StartCapture();
+		//cool camera functions; makes it look good
+		std::shared_ptr<USBCamera> cameraptr(cam);
+		CameraServer::GetInstance()->StartAutomaticCapture(cameraptr);
+
 		chooser = new SendableChooser();
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
@@ -50,11 +63,11 @@ private:
 		autoSelected = *((std::string*)chooser->GetSelected());
 		//std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
 		std::cout << "Auto selected: " << autoSelected << std::endl;
+		//Encoder *enc;
+		//enc = new Encoder(/*DIO port 0, 1*/0, 1, false, Encoder::EncodingType::k4X);
 		if(autoSelected == autoNameCustom){
 			//Custom Auto goes here
 		} else {
-			//armEncoder = new AnalogInput(0); //port here
-			//armEncoder->
 
 
 			/*
