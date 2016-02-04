@@ -1,14 +1,17 @@
 #include "WPILib.h"
-
+#include "ColorSensorMacros.h"
 class Robot: public IterativeRobot
+
 {
 public:
 	Robot() :
-		robotDrive(9, 8, 7, 6),	// these must be initialized in the same order
+		robotDrive(6, 7, 9, 8),	// these must be initialized in the same order
 		leftStick(0),
 		rightStick(1),
 		lw(NULL),
-		chooser()
+		chooser(),
+		ColorSensor(I2C::kOnboard, 0x29)
+
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontLeftMotor,false);
@@ -28,6 +31,8 @@ private:
 	std::string autoSelected;
 	USBCamera *cam;
 	AnalogInput* armEncoder;
+	I2C ColorSensor;
+
 
 	void RobotInit()
 	{
@@ -42,12 +47,15 @@ private:
 		//cool camera functions; makes it look good
 		std::shared_ptr<USBCamera> cameraptr(cam);
 		CameraServer::GetInstance()->StartAutomaticCapture(cameraptr);
-
 		chooser = new SendableChooser();
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
 		SmartDashboard::PutData("Auto Modes", chooser);
 
+		ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_PON);
+		ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN);
+		ColorSensor.Write(TCS_ATIME, uint8_t(50));
+		ColorSensor.Write(TCS_CONTROL, uint8_t(0x00));
 	}
 
 
@@ -122,18 +130,23 @@ private:
 
 	void TeleopPeriodic()
 	{
+
 		//Local declarations
 		float driveThreshold = 0.005;
+		uint8_t *c = NULL;
+		uint8_t *r = NULL;
+		uint8_t *g = NULL;
+		uint8_t *b = NULL;
 
 		//Get the y-axis of the joystick
 
 		float yAxis1Raw = 1 * leftStick.GetY();
 		float yAxis2Raw = 1 * rightStick.GetY();
-
 		//Drive the drive motors when any input is within  -driveThreshold of 0.0
 		//NOTE - currently this doesn't scale up the input from 0.0 after the deadband region -- it just uses the raw value.
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
 		float yAxis2 = DeadZone(yAxis2Raw, driveThreshold, 0.0f);
+
 		robotDrive.TankDrive(-yAxis1,-yAxis2); 	// drive
 		/*{Time()
 		 * INPUT[Camera()
@@ -154,6 +167,15 @@ private:
 		 * move arm to set points (0, 20, 90, 110 degrees)
 		 * "deal with the gas cylinder"
 		 */
+		ColorSensor.Read(TCS_CDATAL, 1, c);
+		ColorSensor.Read(TCS_RDATAL, 1, r);
+		ColorSensor.Read(TCS_GDATAL, 1, g);
+		ColorSensor.Read(TCS_BDATAL, 1, b);
+		//std::cout << "r= " << r << "g= "<< g << "b= " << b << "c=" << c << std::endl;
+		//printf("r=%c g=%c b=%c c=%c", *r, *g, *b, *c);
+
+		//DriverStation::ReportError(r);
+		//+ "g=" + *g + "b=" + *b + "c=" + *c);
 	}
 
 	void TestPeriodic()
@@ -173,4 +195,4 @@ private:
 
 };
 
-START_ROBOT_CLASS(Robot)
+START_ROBOT_CLASS(Robot);
