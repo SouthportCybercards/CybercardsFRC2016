@@ -1,12 +1,7 @@
 #include "WPILib.h"
-<<<<<<< HEAD
 #include "ColorSensorMacros.h"
-class Robot: public IterativeRobot
-
-=======
 
 class Robot: public IterativeRobot
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
 {
 public:
 	Robot() :
@@ -14,13 +9,9 @@ public:
 		leftStick(0),
 		rightStick(1),
 		lw(NULL),
-<<<<<<< HEAD
 		chooser(),
-		ColorSensor(I2C::kOnboard, 0x29)
-
-=======
+		ColorSensor(I2C::kOnboard, 0x29),
 		chooser()
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontLeftMotor,false);
@@ -40,11 +31,7 @@ private:
 	std::string autoSelected;
 	USBCamera *cam;
 	AnalogInput* armEncoder;
-<<<<<<< HEAD
 	I2C ColorSensor;
-
-=======
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
 
 	void RobotInit()
 	{
@@ -59,22 +46,14 @@ private:
 		//cool camera functions; makes it look good
 		std::shared_ptr<USBCamera> cameraptr(cam);
 		CameraServer::GetInstance()->StartAutomaticCapture(cameraptr);
-<<<<<<< HEAD
-=======
-
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
 		chooser = new SendableChooser();
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
 		SmartDashboard::PutData("Auto Modes", chooser);
-
-<<<<<<< HEAD
 		ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_PON);
 		ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN);
 		ColorSensor.Write(TCS_ATIME, uint8_t(50));
 		ColorSensor.Write(TCS_CONTROL, uint8_t(0x00));
-=======
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
 	}
 
 
@@ -149,7 +128,6 @@ private:
 
 	void TeleopPeriodic()
 	{
-<<<<<<< HEAD
 
 		//Local declarations
 		float driveThreshold = 0.005;
@@ -157,27 +135,18 @@ private:
 		uint8_t *r = NULL;
 		uint8_t *g = NULL;
 		uint8_t *b = NULL;
-=======
 		//Local declarations
 		float driveThreshold = 0.005;
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
 
 		//Get the y-axis of the joystick
 
 		float yAxis1Raw = 1 * leftStick.GetY();
 		float yAxis2Raw = 1 * rightStick.GetY();
-<<<<<<< HEAD
-=======
-
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
 		//Drive the drive motors when any input is within  -driveThreshold of 0.0
 		//NOTE - currently this doesn't scale up the input from 0.0 after the deadband region -- it just uses the raw value.
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
 		float yAxis2 = DeadZone(yAxis2Raw, driveThreshold, 0.0f);
-<<<<<<< HEAD
 
-=======
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
 		robotDrive.TankDrive(-yAxis1,-yAxis2); 	// drive
 		/*{Time()
 		 * INPUT[Camera()
@@ -198,7 +167,7 @@ private:
 		 * move arm to set points (0, 20, 90, 110 degrees)
 		 * "deal with the gas cylinder"
 		 */
-<<<<<<< HEAD
+
 		ColorSensor.Read(TCS_CDATAL, 1, c);
 		ColorSensor.Read(TCS_RDATAL, 1, r);
 		ColorSensor.Read(TCS_GDATAL, 1, g);
@@ -208,8 +177,6 @@ private:
 
 		//DriverStation::ReportError(r);
 		//+ "g=" + *g + "b=" + *b + "c=" + *c);
-=======
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
 	}
 
 	void TestPeriodic()
@@ -225,14 +192,6 @@ private:
 		}
 		return target;
 	}
-
-<<<<<<< HEAD
-
 };
 
 START_ROBOT_CLASS(Robot);
-=======
-};
-
-START_ROBOT_CLASS(Robot)
->>>>>>> d894856734c4b92737f1ad3884a2268fb537fedb
