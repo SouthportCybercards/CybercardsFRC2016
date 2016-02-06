@@ -10,8 +10,7 @@ public:
 		rightStick(1),
 		lw(NULL),
 		chooser(),
-		ColorSensor(I2C::kOnboard, 0x29),
-		chooser()
+		ColorSensor(I2C::kOnboard, 0x29)
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontLeftMotor,false);
@@ -50,10 +49,11 @@ private:
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
 		SmartDashboard::PutData("Auto Modes", chooser);
-		ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_PON);
-		ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN);
-		ColorSensor.Write(TCS_ATIME, uint8_t(50));
-		ColorSensor.Write(TCS_CONTROL, uint8_t(0x00));
+		ColorSensor.Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_50MS);
+		ColorSensor.Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_4X); //This is the Gain
+		ColorSensor.Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_WEN | TCS_ENABLE_AEN);
+		//ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_WEN);
+		//ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_AEN);
 	}
 
 
@@ -131,12 +131,10 @@ private:
 
 		//Local declarations
 		float driveThreshold = 0.005;
-		uint8_t *c = NULL;
-		uint8_t *r = NULL;
-		uint8_t *g = NULL;
-		uint8_t *b = NULL;
-		//Local declarations
-		float driveThreshold = 0.005;
+		uint8_t c = 0;
+		uint8_t r = 0;
+		uint8_t g = 0;
+		uint8_t b = 0;
 
 		//Get the y-axis of the joystick
 
@@ -167,16 +165,12 @@ private:
 		 * move arm to set points (0, 20, 90, 110 degrees)
 		 * "deal with the gas cylinder"
 		 */
-
-		ColorSensor.Read(TCS_CDATAL, 1, c);
-		ColorSensor.Read(TCS_RDATAL, 1, r);
-		ColorSensor.Read(TCS_GDATAL, 1, g);
-		ColorSensor.Read(TCS_BDATAL, 1, b);
-		//std::cout << "r= " << r << "g= "<< g << "b= " << b << "c=" << c << std::endl;
-		//printf("r=%c g=%c b=%c c=%c", *r, *g, *b, *c);
-
-		//DriverStation::ReportError(r);
-		//+ "g=" + *g + "b=" + *b + "c=" + *c);
+		//remember to or the command bit for both reading and writing everything
+		ColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+		ColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+		ColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+		ColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+		std::cout << "r= " << (int)r << "g= "<< (int)g << "b= " << (int)b << "c=" << (int)c << std::endl;
 	}
 
 	void TestPeriodic()
