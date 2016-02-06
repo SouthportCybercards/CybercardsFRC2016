@@ -8,11 +8,13 @@ public:
 		robotDrive(6, 7, 9, 8),	// these must be initialized in the same order
 		leftStick(0),
 		rightStick(1),
+		armStick(2),
 		lw(NULL),
 		chooser(),
 		ColorSensor1(I2C::kOnboard, 0x29),
 		ColorSensors(),
-		ColorSensorTimer()
+		ColorSensorTimer(),
+		arm(2)
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontLeftMotor,false);
@@ -20,21 +22,23 @@ public:
 		robotDrive.SetInvertedMotor(robotDrive.kRearLeftMotor,false);
 		robotDrive.SetInvertedMotor(robotDrive.kRearRightMotor,false);
 		cam = new USBCamera("cam0", true);
-		armEncoder = new AnalogInput(1); //dunno channel
+		armEncoder = new Encoder(0, 1, false, Encoder::EncodingType::k1X);
 	}
 private:
 	RobotDrive robotDrive;
-	Joystick leftStick, rightStick;
+	Joystick leftStick, rightStick, armStick;
 	LiveWindow *lw = LiveWindow::GetInstance();
 	SendableChooser *chooser;
 	const std::string autoNameDefault = "Default";
 	const std::string autoNameCustom = "My Auto";
 	std::string autoSelected;
 	USBCamera *cam;
-	AnalogInput* armEncoder;
+	Encoder* armEncoder;
 	I2C ColorSensor1; //first color sensor, will be renamed to be more specific (eg frontcolorsensor)
 	std::vector<I2C*> ColorSensors; //our vector of color sensor pointers; use for everything instead of ColorSensor1
 	Timer ColorSensorTimer;
+	Talon arm;
+	int setPoint = 0;
 
 	void RobotInit()
 	{
@@ -57,6 +61,12 @@ private:
 		for(unsigned int i = 0; i < ColorSensors.size(); i++){//loops through vector and initializes all color sensors.
 			InitColorSensor(ColorSensors[i]);
 		}
+		armEncoder->SetMaxPeriod(.1);
+		armEncoder->SetMinRate(10);
+		armEncoder->SetDistancePerPulse(5);
+		armEncoder->SetReverseDirection(false);
+		armEncoder->SetSamplesToAverage(7);
+
 	}
 
 
@@ -131,29 +141,44 @@ private:
 
 	void TeleopPeriodic()
 	{
-		TestColorSensor(ColorSensors[FRONT]);//testing first sensor, remove later
-
+		//TestColorSensor(ColorSensors[FRONT]);//testing first sensor, remove later
+		std::cout << "getRaw() = " << armEncoder->GetRaw() << "setPoint=" << setPoint << std::endl;
 		//Local declarations
 		float driveThreshold = 0.005;
+		float armThreshold = 0.01;
 		//Get the y-axis of the joystick
 
 		float yAxis1Raw = 1 * leftStick.GetY();
 		float yAxis2Raw = 1 * rightStick.GetY();
+		float armStickYRaw = 1 * armStick.GetY();
 		//Drive the drive motors when any input is within  -driveThreshold of 0.0
 		//NOTE - currently this doesn't scale up the input from 0.0 after the deadband region -- it just uses the raw value.
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
 		float yAxis2 = DeadZone(yAxis2Raw, driveThreshold, 0.0f);
+		float armStickY = DeadZone(armStickYRaw, armThreshold, 0.0f);
 
 		robotDrive.TankDrive(-yAxis1,-yAxis2); 	// drive
+		//read arm input buttons
+		setPoint = ReadSetPointButtons(setPoint);
+
+		//Drive arm to set point
+		if(armStickY != 0.0f){
+			arm.Set(armStickY);
+			setPoint = armEncoder->GetRaw();
+		}
+		else{
+			MoveArmToSetPoint(setPoint);
+		}
+
 		/*{Time()
-		 * INPUT[Camera()
-		 * 			SendToBase()
+		 * INPUT[Camera() complete
+		 * 			SendToBase() complete
 		 * 			CheckForBall()
-		 * INPUT[ReadControl()
-		 * 			Deadzone()
+		 * INPUT[ReadControl() complete
+		 * 			Deadzone() complete
 		 * INPUT[Read sensor()
 		 * 			Deadzone()
-		 * DRIVE[Drivebase(auto, )
+		 * DRIVE[Drivebase(auto, ) complete
 		 * DRIVE[DriveLift()
 		 * 			read()
 		 * 			drive()
@@ -164,6 +189,34 @@ private:
 		 * move arm to set points (0, 20, 90, 110 degrees)
 		 * "deal with the gas cylinder"
 		 */
+	}
+
+	//drives the arm motor to a setpoint
+	void MoveArmToSetPoint(int setPoint){
+		if(armEncoder->GetRaw() < setPoint - 50){
+			arm.Set(1);
+		}else if(armEncoder->GetRaw() > setPoint + 50){
+			arm.Set(-1);
+		}else{
+			arm.Set(0);
+		}
+	}
+
+	//reads arm setpoint buttons and selects destination
+	int ReadSetPointButtons(int currentPoint){
+		//default set point to the current encoder value
+		int point = currentPoint;
+
+		//if set point button is pressed return its setpoint
+		if(armStick.GetRawButton(7)){
+			point = -100;
+		}else if(armStick.GetRawButton(8)){
+			point = 2000;
+		}else if(armStick.GetRawButton(11)){
+			point = 3000;
+		}
+
+		return point;
 	}
 
 	void TestPeriodic()
