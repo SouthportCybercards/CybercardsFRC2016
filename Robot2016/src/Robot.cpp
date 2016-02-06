@@ -9,12 +9,16 @@ public:
 		leftStick(0),
 		rightStick(1),
 		armStick(2),
+		launchPad(3),
 		lw(NULL),
 		chooser(),
 		ColorSensor1(I2C::kOnboard, 0x29),
 		ColorSensors(),
 		ColorSensorTimer(),
-		arm(2)
+		arm(2),
+		ballIntake1(3),
+		ballIntake2(4),
+		touchSensor(2)
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontLeftMotor,false);
@@ -26,7 +30,7 @@ public:
 	}
 private:
 	RobotDrive robotDrive;
-	Joystick leftStick, rightStick, armStick;
+	Joystick leftStick, rightStick, armStick, launchPad;
 	LiveWindow *lw = LiveWindow::GetInstance();
 	SendableChooser *chooser;
 	const std::string autoNameDefault = "Default";
@@ -37,7 +41,8 @@ private:
 	I2C ColorSensor1; //first color sensor, will be renamed to be more specific (eg frontcolorsensor)
 	std::vector<I2C*> ColorSensors; //our vector of color sensor pointers; use for everything instead of ColorSensor1
 	Timer ColorSensorTimer;
-	Talon arm;
+	Talon arm, ballIntake1, ballIntake2;
+	DigitalInput touchSensor;
 	int setPoint = 0;
 
 	void RobotInit()
@@ -66,10 +71,7 @@ private:
 		armEncoder->SetDistancePerPulse(5);
 		armEncoder->SetReverseDirection(false);
 		armEncoder->SetSamplesToAverage(7);
-
 	}
-
-
 	/**
 	 * This autonomous (along with the chooser code above) shows how to select between different autonomous modes
 	 * using the dashboard. The sendable chooser code works with the Java SmartDashboard.
@@ -117,9 +119,9 @@ private:
 			 * 		LiftGate() ...?
 			 *
 			 * 		read arm encoder
-			 * 		drive arm at full speed to 75 degrees
-			 * 		drive arm slowly to zero switch
-			 * 		drive arm up to 20 degrees
+			 * 		drive arm at full speed to 75 degrees (not needed with abs encoder)
+			 * 		drive arm slowly to zero switch (not needed with abs encoder)
+			 * 		drive arm up to 20 degrees (not needed with abs encoder)
 			 * 		check sensors
 			 *
 			 * 		intake:
@@ -142,11 +144,11 @@ private:
 	void TeleopPeriodic()
 	{
 		//TestColorSensor(ColorSensors[FRONT]);//testing first sensor, remove later
-		std::cout << "getRaw() = " << armEncoder->GetRaw() << "setPoint=" << setPoint << std::endl;
+		//std::cout << "getRaw() = " << armEncoder->GetRaw() << "setPoint=" << setPoint << std::endl;
 		//Local declarations
 		float driveThreshold = 0.005;
 		float armThreshold = 0.01;
-		//Get the y-axis of the joystick
+		//Get the y-axis of the joystickk
 
 		float yAxis1Raw = 1 * leftStick.GetY();
 		float yAxis2Raw = 1 * rightStick.GetY();
@@ -158,6 +160,7 @@ private:
 		float armStickY = DeadZone(armStickYRaw, armThreshold, 0.0f);
 
 		robotDrive.TankDrive(-yAxis1,-yAxis2); 	// drive
+		BallIntake();
 		//read arm input buttons
 		setPoint = ReadSetPointButtons(setPoint);
 
@@ -169,6 +172,7 @@ private:
 		else{
 			MoveArmToSetPoint(setPoint);
 		}
+
 
 		/*{Time()
 		 * INPUT[Camera() complete
@@ -259,6 +263,21 @@ private:
 			std::cout << "r= " << (int)r << "g= "<< (int)g << "b= " << (int)b << "c=" << (int)c << std::endl;
 		}
 
+	}
+	void BallIntake(){
+		bool intakeButton = launchPad.GetRawButton(1);
+		bool shootButton = launchPad.GetRawButton(2);
+		//std::cout << "intake" << intakeButton << std::endl << "shoot" << shootButton << touchSensor.Get() << std::endl;
+		if(intakeButton == true && !touchSensor.Get()){
+			ballIntake1.Set(1);
+			ballIntake2.Set(1);
+		}else if(shootButton == true && touchSensor.Get()){
+			ballIntake1.Set(-1);
+			ballIntake2.Set(-1);
+		}else{
+			ballIntake1.Set(0);
+			ballIntake2.Set(0);
+		}
 	}
 };
 
