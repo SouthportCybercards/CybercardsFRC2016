@@ -1,6 +1,6 @@
 #include "WPILib.h"
 #include "ColorSensorMacros.h"
-
+enum ColorSensors{FRONT, BACK, BACK2}; //access front, back, or back2 color sensors with ColorSensors[FRONT], etc.
 class Robot: public IterativeRobot
 {
 public:
@@ -10,7 +10,9 @@ public:
 		rightStick(1),
 		lw(NULL),
 		chooser(),
-		ColorSensor(I2C::kOnboard, 0x29)
+		ColorSensor1(I2C::kOnboard, 0x29),
+		ColorSensors(),
+		ColorSensorTimer()
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontLeftMotor,false);
@@ -30,7 +32,9 @@ private:
 	std::string autoSelected;
 	USBCamera *cam;
 	AnalogInput* armEncoder;
-	I2C ColorSensor;
+	I2C ColorSensor1; //first color sensor, will be renamed to be more specific (eg frontcolorsensor)
+	std::vector<I2C*> ColorSensors; //our vector of color sensor pointers; use for everything instead of ColorSensor1
+	Timer ColorSensorTimer;
 
 	void RobotInit()
 	{
@@ -49,11 +53,10 @@ private:
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
 		SmartDashboard::PutData("Auto Modes", chooser);
-		ColorSensor.Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_50MS);
-		ColorSensor.Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_4X); //This is the Gain
-		ColorSensor.Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_WEN | TCS_ENABLE_AEN);
-		//ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_WEN);
-		//ColorSensor.Write(TCS_ENABLE, TCS_ENABLE_AEN);
+		ColorSensors.push_back(&ColorSensor1);
+		for(unsigned int i = 0; i < ColorSensors.size(); i++){//loops through vector and initializes all color sensors.
+			InitColorSensor(ColorSensors[i]);
+		}
 	}
 
 
@@ -128,14 +131,10 @@ private:
 
 	void TeleopPeriodic()
 	{
+		TestColorSensor(ColorSensors[FRONT]);//testing first sensor, remove later
 
 		//Local declarations
 		float driveThreshold = 0.005;
-		uint8_t c = 0;
-		uint8_t r = 0;
-		uint8_t g = 0;
-		uint8_t b = 0;
-
 		//Get the y-axis of the joystick
 
 		float yAxis1Raw = 1 * leftStick.GetY();
@@ -165,12 +164,6 @@ private:
 		 * move arm to set points (0, 20, 90, 110 degrees)
 		 * "deal with the gas cylinder"
 		 */
-		//remember to or the command bit for both reading and writing everything
-		ColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
-		ColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-		ColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-		ColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-		std::cout << "r= " << (int)r << "g= "<< (int)g << "b= " << (int)b << "c=" << (int)c << std::endl;
 	}
 
 	void TestPeriodic()
@@ -185,6 +178,34 @@ private:
 			}
 		}
 		return target;
+	}
+	//Initializes a single color sensor. Pointer should be passed in with &sensor or from the vector of *I2C's
+	void InitColorSensor(I2C* sensor){
+		//remember to or the command bit for both reading and writing everything
+		sensor->Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_50MS);
+		sensor->Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_4X); //This is the Gain
+		sensor->Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_WEN | TCS_ENABLE_AEN);
+	}
+	//This function was made to test a single color sensor. Later, there will be a single function for reading all color sensors
+	//and interpreting data.
+	void TestColorSensor(I2C* sensor){
+		double currentTime;
+
+		currentTime = ColorSensorTimer.Get();
+		if(currentTime == 0.0){
+			ColorSensorTimer.Start();
+		}else if(ColorSensorTimer.HasPeriodPassed((double)1.0)){
+			uint8_t c = 0;
+			uint8_t r = 0;
+			uint8_t g = 0;
+			uint8_t b = 0;
+			sensor->Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+			sensor->Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+			sensor->Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+			sensor->Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+			std::cout << "r= " << (int)r << "g= "<< (int)g << "b= " << (int)b << "c=" << (int)c << std::endl;
+		}
+
 	}
 };
 
