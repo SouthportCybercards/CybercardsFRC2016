@@ -1,6 +1,6 @@
 #include "WPILib.h"
 #include "ColorSensorMacros.h"
-enum ColorSensors{FRONT, BACK, BACK2}; //access front, back, or back2 color sensors with ColorSensors[FRONT], etc.
+enum ColorSensorPosition{FRONT, BACK, BACK2}; //access front, back, or back2 color sensors with ColorSensors[FRONT], etc.
 class Robot: public IterativeRobot
 {
 public:
@@ -12,9 +12,12 @@ public:
 		launchPad(3),
 		lw(NULL),
 		chooser(),
-		ColorSensor1(I2C::kOnboard, 0x29),
+		FrontColorSensor(I2C::kOnboard, 0x70),
+		BackColorSensor1(I2C::kOnboard, 0x71),
+		BackColorSensor2(I2C::kOnboard, 0x72),
 		ColorSensors(),
 		ColorSensorTimer(),
+		autoTimer(),
 		arm(2),
 		ballIntake1(3),
 		ballIntake2(4),
@@ -38,12 +41,17 @@ private:
 	std::string autoSelected;
 	USBCamera *cam;
 	Encoder* armEncoder;
-	I2C ColorSensor1; //first color sensor, will be renamed to be more specific (eg frontcolorsensor)
+	I2C FrontColorSensor; //FRONT
+	I2C BackColorSensor1; //BACK
+	I2C BackColorSensor2; //BACK2
 	std::vector<I2C*> ColorSensors; //our vector of color sensor pointers; use for everything instead of ColorSensor1
 	Timer ColorSensorTimer;
+	Timer autoTimer;
 	Talon arm, ballIntake1, ballIntake2;
 	DigitalInput touchSensor;
 	int setPoint = 0;
+	bool overGreen = true;
+	int carpetRGB[3] = {0};
 
 	void RobotInit()
 	{
@@ -62,7 +70,9 @@ private:
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
 		SmartDashboard::PutData("Auto Modes", chooser);
-		ColorSensors.push_back(&ColorSensor1);
+		ColorSensors.push_back(&FrontColorSensor);
+		ColorSensors.push_back(&BackColorSensor1);
+		ColorSensors.push_back(&BackColorSensor2);
 		for(unsigned int i = 0; i < ColorSensors.size(); i++){//loops through vector and initializes all color sensors.
 			InitColorSensor(ColorSensors[i]);
 		}
@@ -89,8 +99,7 @@ private:
 		if(autoSelected == autoNameCustom){
 			//Custom Auto goes here
 		} else {
-
-
+			autoTimer.Start();
 			/*
 			 * Specify defences, where etc
 			 * Calibrate sensors
@@ -110,6 +119,29 @@ private:
 		if(autoSelected == autoNameCustom){
 			//Custom Auto goes here
 		} else {
+			//LOGIC FOR STOPPING ROBOT
+			double currentTime = autoTimer.Get();
+			//if(currentTime == 0.0){
+			//	autoTimer.Start();
+			//}
+			bool frontGreen = CheckSensorForGreen(ColorSensors[FRONT], FRONT);
+			bool backGreen = CheckSensorForGreen(ColorSensors[BACK], BACK);
+			bool back2Green = CheckSensorForGreen(ColorSensors[BACK2], BACK2);
+			bool overGreenPrevious = overGreen;
+			if(frontGreen && backGreen && back2Green){ //checking all sensors for this
+				overGreen = true;
+			}else{
+				overGreen = false;
+			}
+
+			if(overGreenPrevious == false && overGreen == true && currentTime >= 2.0){
+				//making sure we've driven at least 2.0 secs
+				robotDrive.StopMotor();
+
+			}else {
+				robotDrive.TankDrive(1.0 ,1.0);
+			}
+
 			//Default Auto goes here
 			/*
 			 * Auton()
@@ -138,6 +170,7 @@ private:
 
 	void TeleopInit()
 	{
+
 
 	}
 
@@ -271,13 +304,60 @@ private:
 		if(intakeButton == true && !touchSensor.Get()){
 			ballIntake1.Set(1);
 			ballIntake2.Set(1);
-		}else if(shootButton == true && touchSensor.Get()){
+		}else if(shootButton == true && touchSensor.Get()){//make touchSensor.Get on a timer
 			ballIntake1.Set(-1);
 			ballIntake2.Set(-1);
 		}else{
 			ballIntake1.Set(0);
 			ballIntake2.Set(0);
 		}
+	}
+	bool CheckSensorForGreen(I2C* sensor, ColorSensorPosition position){ //pass in sensor and position
+		uint8_t r = 0;
+		uint8_t g = 0;
+		uint8_t b = 0;
+		uint8_t c = 0;
+		int threshold = 10;
+		sensor->Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+		sensor->Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+		sensor->Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+		sensor->Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+		r /= c; g /= c; b /= c; //this averages values with c value
+		r *= 256; g *= 256; b *= 256; //brings it back to normal rgb values
+		std::cout << "r = " << r << "g = " << g << "b = " << b << std::endl;
+		if(r < (carpetRGB[0] + threshold) && r > (carpetRGB[0] - threshold)){
+			if(g < (carpetRGB[1] + threshold) && g > (carpetRGB[1] - threshold)){
+				if(b < (carpetRGB[2] + threshold) && b > (carpetRGB[2] - threshold)){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	void CalibrateSensors(){
+		uint8_t r = 0;
+		uint8_t g = 0;
+		uint8_t b = 0;
+		uint8_t c = 0;
+		carpetRGB[0] = 0;
+		carpetRGB[1] = 0;
+		carpetRGB[2] = 0;
+
+		for (int i = 0; i < 3; i++){
+			ColorSensors[i]->Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+			ColorSensors[i]->Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+			ColorSensors[i]->Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+			ColorSensors[i]->Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+
+			r /= c; g /= c; b /= c; //this averages values with c value
+			r *= 256; g *= 256; b *= 256; //brings it back to normal rgb value
+			carpetRGB[0] = carpetRGB[0] + r;
+			carpetRGB[1] = carpetRGB[1] + g;
+			carpetRGB[2] = carpetRGB[2] + b;
+		}
+		carpetRGB[0] /= 3;
+		carpetRGB[1] /= 3;
+		carpetRGB[2] /= 3;
 	}
 };
 
