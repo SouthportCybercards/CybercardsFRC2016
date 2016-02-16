@@ -16,7 +16,7 @@ public:
 		//BackColorSensor1(I2C::kOnboard, 0x29),
 		//BackColorSensor2(I2C::kOnboard, 0x29),
 		Multiplexer(I2C::kOnboard, 0x70),
-		ColorSensors(),
+		//ColorSensors(),
 		ColorSensorTimer(),
 		autoTimer(),
 		ballTimer(),
@@ -47,7 +47,7 @@ private:
 	//I2C BackColorSensor1; //BACK
 	//I2C BackColorSensor2; //BACK2
 	I2C Multiplexer;
-	std::vector<I2C*> ColorSensors; //our vector of color sensor pointers; use for everything instead of ColorSensor1
+	//std::vector<I2C*> ColorSensors; //our vector of color sensor pointers; use for everything instead of ColorSensor1
 	Timer ColorSensorTimer;
 	Timer autoTimer;
 	Timer ballTimer;
@@ -56,6 +56,7 @@ private:
 	int setPoint = 0;
 	bool overGreen = true;
 	int carpetRGB[3] = {0};
+	ColorSensorPosition iSensorCounter = FRONT;
 
 	void RobotInit()
 	{
@@ -74,12 +75,12 @@ private:
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
 		SmartDashboard::PutData("Auto Modes", chooser);
-		ColorSensors.push_back(&FrontColorSensor);
-		ColorSensors.push_back(&BackColorSensor1);
-		ColorSensors.push_back(&BackColorSensor2);
-		for(unsigned int i = 0; i < ColorSensors.size(); i++){//loops through vector and initializes all color sensors.
-			InitColorSensor(ColorSensors[i], (ColorSensorPosition)i);
-		}
+		//ColorSensors.push_back(&FrontColorSensor);
+		//ColorSensors.push_back(&BackColorSensor1);
+		//ColorSensors.push_back(&BackColorSensor2);
+		//for(unsigned int i = 0; i < ColorSensors.size(); i++){//loops through vector and initializes all color sensors.
+		InitColorSensor();
+		//}
 		armEncoder->SetMaxPeriod(.1);
 		armEncoder->SetMinRate(10);
 		armEncoder->SetDistancePerPulse(5);
@@ -97,7 +98,7 @@ private:
 	{
 		autoSelected = *((std::string*)chooser->GetSelected());
 		//std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
-		std::cout << "Auto selected: " << autoSelected << std::endl;
+		//std::cout << "Auto selected: " << autoSelected << std::endl;
 		//Encoder *enc;
 		//enc = new Encoder(/*DIO port 0, 1*/0, 1, false, Encoder::EncodingType::k4X);
 		if(autoSelected == autoNameCustom){
@@ -129,9 +130,9 @@ private:
 			//if(currentTime == 0.0){
 			//	autoTimer.Start();
 			//}
-			bool frontGreen = CheckSensorForGreen(ColorSensors[FRONT], FRONT);
-			bool backGreen = CheckSensorForGreen(ColorSensors[BACK], BACK);
-			bool back2Green = CheckSensorForGreen(ColorSensors[BACK2], BACK2);
+			bool frontGreen = CheckSensorForGreen(FRONT);  //ColorSensors[FRONT], FRONT);
+			bool backGreen = CheckSensorForGreen(BACK);
+			bool back2Green = CheckSensorForGreen(BACK2);
 			bool overGreenPrevious = overGreen;
 			if(frontGreen && backGreen && back2Green){ //checking all sensors for this
 				overGreen = true;
@@ -185,9 +186,7 @@ private:
 		//TestColorSensor(ColorSensors[FRONT]);//testing first sensor, remove later
 		//std::cout << "getRaw() = " << armEncoder->GetRaw() << "setPoint=" << setPoint << std::endl;
 		//Local declarations
-		TestColorSensor(ColorSensors[FRONT], FRONT);
-		TestColorSensor(ColorSensors[BACK], BACK);
-		TestColorSensor(ColorSensors[BACK2], BACK2);
+		TestColorSensor();
 		float driveThreshold = 0.005;
 		float armThreshold = 0.01;
 		//Get the y-axis of the joystickk
@@ -279,32 +278,50 @@ private:
 		return target;
 	}
 	//Initializes a single color sensor. Pointer should be passed in with &sensor or from the vector of *I2C's
-	void InitColorSensor(I2C* sensor, ColorSensorPosition position){
-		//tcaselect(position);
-		//remember to or the command bit for both reading and writing everything
-		sensor->Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_700MS);
-		sensor->Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_1X); //This is the Gain
-		sensor->Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN | TCS_ENABLE_WEN);
+	void InitColorSensor(){
+		for(int i = 0; i < 3; i++){
+			tcaselect(i);
+			//remember to or the command bit for both reading and writing everything
+			Multiplexer.Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_700MS);
+			Multiplexer.Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_1X); //This is the Gain
+			Multiplexer.Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN | TCS_ENABLE_WEN);
+		}
 	}
 	//This function was made to test a single color sensor. Later, there will be a single function for reading all color sensors
 	//and interpreting data.
 
-	void TestColorSensor(I2C* sensor, ColorSensorPosition position){
+	void TestColorSensor(){
 		double currentTime;
 		currentTime = ColorSensorTimer.Get();
 		if(currentTime == 0.0){
 			ColorSensorTimer.Start();
-		}else if(ColorSensorTimer.HasPeriodPassed((double)0.2)){
-			uint8_t c = 0;
-			uint8_t r = 0;
-			uint8_t g = 0;
-			uint8_t b = 0;
-			tcaselect(position);
-			sensor->Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
-			sensor->Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-			sensor->Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-			sensor->Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-			std::cout << position << "; " << "r= " << (int)r << "g= "<< (int)g << "b= " << (int)b << "c=" << (int)c << std::endl;
+			tcaselect(FRONT);
+		}else if(ColorSensorTimer.HasPeriodPassed((double)0.5)){ //change this to shorter time later
+			if(currentTime > 10){
+				ColorSensorTimer.Reset();
+				tcaselect(FRONT);
+			}else{
+				uint8_t c = 0;
+				uint8_t r = 0;
+				uint8_t g = 0;
+				uint8_t b = 0;
+				Multiplexer.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+				Multiplexer.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+				Multiplexer.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+				Multiplexer.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+				//std::cout << currentTime << std::endl;
+				std::cout << iSensorCounter << "; " << "r= " << (int)r << "g= "<< (int)g << "b= " << (int)b << "c=" << (int)c << std::endl;
+				if(iSensorCounter == FRONT){
+					iSensorCounter = BACK;
+					tcaselect(1);
+				}else if(iSensorCounter == BACK){
+					iSensorCounter = BACK2;
+					tcaselect(2);
+				}else{
+					iSensorCounter = FRONT;
+					tcaselect(0);
+				}
+			}
 		}
 
 	}
@@ -326,17 +343,17 @@ private:
 			ballTimer.Stop();
 		}
 	}
-	bool CheckSensorForGreen(I2C* sensor, ColorSensorPosition position){ //pass in sensor and position
+	bool CheckSensorForGreen(ColorSensorPosition position){ //pass in sensor and position
 		uint8_t r = 0;
 		uint8_t g = 0;
 		uint8_t b = 0;
 		uint8_t c = 0;
 		int threshold = 10;
 		tcaselect(position);
-		sensor->Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-		sensor->Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-		sensor->Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-		sensor->Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+		Multiplexer.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+		Multiplexer.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+		Multiplexer.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+		Multiplexer.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
 		double red, green, blue, clear;
 		red = (double)r; green = (double)g; blue = (double)b; clear = (double)c;
 		//red /= clear; green /= clear; blue /= clear; //this averages values with c value
@@ -364,10 +381,10 @@ private:
 
 		for (int i = 0; i < 3; i++){
 			tcaselect(i);
-			ColorSensors[i]->Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-			ColorSensors[i]->Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-			ColorSensors[i]->Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-			ColorSensors[i]->Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+			Multiplexer.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+			Multiplexer.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+			Multiplexer.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+			Multiplexer.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
 
 			double red  = (double)r;
 			double green  = (double)g;
@@ -387,8 +404,8 @@ private:
 		std::cout << "Done Calibrating, 0= " << carpetRGB[0] << ", "<< "1= " << carpetRGB[1] << ", " << "2= " << carpetRGB[2] << std::endl;
 	}
 	void tcaselect(uint8_t i) {
-	  if (i > 7) return;
-	  Multiplexer.Write(0x70, 1 << i);
+		if(i > 7) return;
+		Multiplexer.Write(0x70, (uint8_t)1 << i);
 	}
 };
 
