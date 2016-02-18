@@ -12,7 +12,7 @@ public:
 		launchPad(3),
 		lw(NULL),
 		chooser(),
-		//FrontColorSensor(I2C::kOnboard, 0x29),
+		FrontColorSensor(I2C::kOnboard, 0x29),
 		//BackColorSensor1(I2C::kOnboard, 0x29),
 		//BackColorSensor2(I2C::kOnboard, 0x29),
 		Multiplexer(I2C::kOnboard, 0x70),
@@ -43,7 +43,7 @@ private:
 	std::string autoSelected;
 	USBCamera *cam;
 	Encoder* armEncoder;
-	//I2C FrontColorSensor; //FRONT
+	I2C FrontColorSensor; //FRONT
 	//I2C BackColorSensor1; //BACK
 	//I2C BackColorSensor2; //BACK2
 	I2C Multiplexer;
@@ -144,8 +144,9 @@ private:
 			if(overGreenPrevious == false && overGreen == true && currentTime >= 2.0){
 				//making sure we've driven at least 2.0 secs
 				robotDrive.StopMotor();
-
-			}else {
+			}else if(currentTime > 8.0){
+				robotDrive.StopMotor();
+			}else{
 				robotDrive.TankDrive(1.0 ,1.0);
 			}
 
@@ -193,7 +194,7 @@ private:
 
 		float yAxis1Raw = 1 * leftStick.GetY();
 		float yAxis2Raw = 1 * rightStick.GetY();
-		float armStickYRaw = 1 * armStick.GetY();
+		float armStickYRaw = 0.2 * armStick.GetY();
 		//Drive the drive motors when any input is within  -driveThreshold of 0.0
 		//NOTE - currently this doesn't scale up the input from 0.0 after the deadband region -- it just uses the raw value.
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
@@ -280,11 +281,12 @@ private:
 	//Initializes a single color sensor. Pointer should be passed in with &sensor or from the vector of *I2C's
 	void InitColorSensor(){
 		for(int i = 0; i < 3; i++){
+			Wait(0.7);
 			tcaselect(i);
 			//remember to or the command bit for both reading and writing everything
-			Multiplexer.Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_700MS);
-			Multiplexer.Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_1X); //This is the Gain
-			Multiplexer.Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN | TCS_ENABLE_WEN);
+			FrontColorSensor.Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_700MS);
+			FrontColorSensor.Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_1X); //This is the Gain
+			FrontColorSensor.Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN | TCS_ENABLE_WEN);
 		}
 	}
 	//This function was made to test a single color sensor. Later, there will be a single function for reading all color sensors
@@ -296,7 +298,7 @@ private:
 		if(currentTime == 0.0){
 			ColorSensorTimer.Start();
 			tcaselect(FRONT);
-		}else if(ColorSensorTimer.HasPeriodPassed((double)0.5)){ //change this to shorter time later
+		}else if(ColorSensorTimer.HasPeriodPassed((double)0.7)){ //change this to shorter time later
 			if(currentTime > 10){
 				ColorSensorTimer.Reset();
 				tcaselect(FRONT);
@@ -305,10 +307,10 @@ private:
 				uint8_t r = 0;
 				uint8_t g = 0;
 				uint8_t b = 0;
-				Multiplexer.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
-				Multiplexer.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-				Multiplexer.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-				Multiplexer.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+				FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+				FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+				FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+				FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
 				//std::cout << currentTime << std::endl;
 				std::cout << iSensorCounter << "; " << "r= " << (int)r << "g= "<< (int)g << "b= " << (int)b << "c=" << (int)c << std::endl;
 				if(iSensorCounter == FRONT){
@@ -333,14 +335,12 @@ private:
 		if(intakeButton == true && !touchSensor.Get()){
 			ballIntake1.Set(1);
 			ballIntake2.Set(1);
-		}else if((shootButton == true && touchSensor.Get()) || ballTimer.Get() < 5){
-			ballTimer.Start();//make touchSensor.Get on a timer
+		}else if(shootButton == true){
 			ballIntake1.Set(-1);
 			ballIntake2.Set(-1);
 		}else{
 			ballIntake1.Set(0);
 			ballIntake2.Set(0);
-			ballTimer.Stop();
 		}
 	}
 	bool CheckSensorForGreen(ColorSensorPosition position){ //pass in sensor and position
@@ -348,17 +348,15 @@ private:
 		uint8_t g = 0;
 		uint8_t b = 0;
 		uint8_t c = 0;
-		int threshold = 10;
-		tcaselect(position);
-		Multiplexer.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-		Multiplexer.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-		Multiplexer.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-		Multiplexer.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+		int threshold = 50;
+		FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+		FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+		FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+		FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
 		double red, green, blue, clear;
 		red = (double)r; green = (double)g; blue = (double)b; clear = (double)c;
 		//red /= clear; green /= clear; blue /= clear; //this averages values with c value
 		//red *= 256; green *= 256; blue *= 256; //brings it back to normal rgb values; doesn't work
-
 		std::cout << "r = " << (int)red << "g = " << (int)green << "b = " << (int)blue << "c = " << (int)clear << std::endl;
 		if(r < (carpetRGB[0] + threshold) && r > (carpetRGB[0] - threshold)){
 			if(g < (carpetRGB[1] + threshold) && g > (carpetRGB[1] - threshold)){
@@ -368,6 +366,7 @@ private:
 				}
 			}
 		}
+		tcaselect(position);
 		return false;
 	}
 	void CalibrateSensors(){
@@ -381,10 +380,11 @@ private:
 
 		for (int i = 0; i < 3; i++){
 			tcaselect(i);
-			Multiplexer.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-			Multiplexer.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-			Multiplexer.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-			Multiplexer.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+			Wait(0.7);
+			FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+			FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+			FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+			FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
 
 			double red  = (double)r;
 			double green  = (double)g;
@@ -403,6 +403,7 @@ private:
 		carpetRGB[2] /= 3;
 		std::cout << "Done Calibrating, 0= " << carpetRGB[0] << ", "<< "1= " << carpetRGB[1] << ", " << "2= " << carpetRGB[2] << std::endl;
 	}
+	//sets which mux address to write to
 	void tcaselect(uint8_t i) {
 		if(i > 7) return;
 		Multiplexer.Write(0x70, (uint8_t)1 << i);
