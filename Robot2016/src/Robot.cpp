@@ -151,21 +151,28 @@ private:
 			}else{
 				overGreen = false;
 			}
-
-			if(overGreenPrevious == false && overGreen == true && currentTime >= 2.0){
-				//making sure we've driven at least 2.0 secs
-				robotDrive.StopMotor();
-			}else if(currentTime > 8.0){
-				robotDrive.StopMotor();
+			if(currentTime < 2){
+				arm.Set(-0.1);
+			}else if(currentTime < 4.5){
+				arm.Set(0);
+				robotDrive.TankDrive(-1.0, -1.0);
 			}else{
-				robotDrive.TankDrive(1.0 ,1.0);
+				robotDrive.StopMotor();
 			}
+
+			//if(overGreenPqrevious == false && overGreen == true && currentTime >= 2.0){
+				//making sure we've driven at least 2.0 secs
+			//	robotDrive.StopMotor();
+			//}else
+			//if(currentTime > 3.5){
+			//	robotDrive.StopMotor();
+			//}
 
 			//Default Auto goes here
 			/*
 			 * Auton()
 			 * 		ColorSense()
-			 * 		ReadOtherSensors()
+			 * 		ReadOtherSensors(
 			 * 		DriveMotors()
 			 * 		LiftGate() ...?
 			 *
@@ -200,7 +207,7 @@ private:
 		//Local declarations
 		TestColorSensor();
 		float driveThreshold = 0.005;
-		float armThreshold = 0.1;
+		float armThreshold = 0.2;
 		//Get the y-axis of the joystickk
 
 		float yAxis1Raw = 1 * leftStick.GetY();
@@ -223,9 +230,9 @@ private:
 		if(armStickY != 0.0f){
 			//if joystick back(positive value)
 			if(armStickY > 0){
-				arm.Set(0.7);//drive arm up
+				arm.Set(0.7);//drive arm up prev 0.7
 			}else if(armStickY < 0){
-				arm.Set(0);//drive arm down
+				arm.Set(0);//drive arm down prev 0
 			}
 
 			setPoint = armEncoder->GetRaw();
@@ -261,12 +268,12 @@ private:
 	void MoveArmToSetPoint(int setPoint){
 		//if arm is down too much
 		if(armEncoder->GetRaw() > (setPoint + 2)){
-			arm.Set(0.8); //drive arm up
+			arm.Set(0.5); //drive arm up prev 0.6
 			//if arm is too far up
 		}else if(armEncoder->GetRaw() < (setPoint - 10)){
-			arm.Set(-0.2); //drive arm down
+			arm.Set(-0.1); //drive arm down prev -0.2
 		}else{
-			arm.Set(0.3); //default to driving up so the arm shakes less
+			arm.Set(0.3); //default to driving up so the arm shakes less prev 0.3
 		}
 	}
 
@@ -353,8 +360,8 @@ private:
 	}
 	void BallIntake(){
 
-		bool intakeButton = launchPad.GetRawButton(1);
-		bool shootButton = launchPad.GetRawButton(2);
+		bool intakeButton = armStick.GetRawButton(1);
+		bool shootButton = armStick.GetRawButton(6);
 		//std::cout << "intake" << intakeButton << std::endl << "shoot" << shootButton << touchSensor.Get() << std::endl;
 		if(intakeButton == true){// && !touchSensor.Get()){
 			ballIntake1.Set(1);
