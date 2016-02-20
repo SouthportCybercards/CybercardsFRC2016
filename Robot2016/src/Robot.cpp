@@ -20,10 +20,11 @@ public:
 		ColorSensorTimer(),
 		autoTimer(),
 		ballTimer(),
-		arm(2),
+		arm(3),
 		ballIntake1(3),
 		ballIntake2(4),
 		touchSensor(2)
+		//armLimitSwitch(0)
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(robotDrive.kFrontLeftMotor,false);
@@ -53,15 +54,17 @@ private:
 	Timer ballTimer;
 	Talon arm, ballIntake1, ballIntake2;
 	DigitalInput touchSensor;
+	//DigitalInput armLimitSwitch;
 	int setPoint = 0;
 	bool overGreen = true;
 	int carpetRGB[3] = {0};
+	int encoderZero = 0;
 	ColorSensorPosition iSensorCounter = FRONT;
 
 	void RobotInit()
 	{
 
-		/*CameraServer::GetInstance()->SetQuality(100);
+		CameraServer::GetInstance()->SetQuality(100);
 		cam->OpenCamera();
 		cam->SetBrightness(10);
 		cam->SetExposureAuto();
@@ -70,7 +73,7 @@ private:
 		cam->StartCapture();
 		//cool camera functions; makes it look good
 		std::shared_ptr<USBCamera> cameraptr(cam);
-		CameraServer::GetInstance()->StartAutomaticCapture(cameraptr);*/
+		CameraServer::GetInstance()->StartAutomaticCapture(cameraptr);
 		chooser = new SendableChooser();
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
@@ -127,9 +130,17 @@ private:
 		} else {
 			//LOGIC FOR STOPPING ROBOT
 			double currentTime = autoTimer.Get();
-			//if(currentTime == 0.0){
-			//	autoTimer.Start();
-			//}
+			/*if(currentTime < 0.5){
+				arm.Set(0.15);
+			}else if(armLimitSwitch.Get() == 1){
+				arm.Set(0);
+				encoderZero = armEncoder->GetRaw();
+				setPoint = encoderZero;
+				std::cout << "encoder being zeroed; value = " << encoderZero << std::endl;
+			}else if(currentTime > 6){
+				arm.Set(0);
+				//failsafe
+			}*/
 			bool frontGreen = CheckSensorForGreen(FRONT);  //ColorSensors[FRONT], FRONT);
 			bool backGreen = CheckSensorForGreen(BACK);
 			bool back2Green = CheckSensorForGreen(BACK2);
@@ -189,12 +200,14 @@ private:
 		//Local declarations
 		TestColorSensor();
 		float driveThreshold = 0.005;
-		float armThreshold = 0.01;
+		float armThreshold = 0.1;
 		//Get the y-axis of the joystickk
 
 		float yAxis1Raw = 1 * leftStick.GetY();
 		float yAxis2Raw = 1 * rightStick.GetY();
-		float armStickYRaw = 0.2 * armStick.GetY();
+		float armStickYRaw = 1 * armStick.GetY();
+
+
 		//Drive the drive motors when any input is within  -driveThreshold of 0.0
 		//NOTE - currently this doesn't scale up the input from 0.0 after the deadband region -- it just uses the raw value.
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
@@ -204,16 +217,23 @@ private:
 		robotDrive.TankDrive(-yAxis1,-yAxis2); 	// drive
 		BallIntake();
 		//read arm input buttons
-		setPoint = ReadSetPointButtons(setPoint);
+		//setPoint = ReadSetPointButtons(setPoint);
 
 		//Drive arm to set point
 		if(armStickY != 0.0f){
-			arm.Set(armStickY);
+			//if joystick back(positive value)
+			if(armStickY > 0){
+				arm.Set(0.7);//drive arm up
+			}else if(armStickY < 0){
+				arm.Set(0);//drive arm down
+			}
+
 			setPoint = armEncoder->GetRaw();
 		}
 		else{
 			MoveArmToSetPoint(setPoint);
 		}
+		std::cout << "encoder value = " << armEncoder->GetRaw() << " " << "setPoint = " << setPoint << " " << armStickY << std::endl;
 
 
 		/*{Time()
@@ -239,12 +259,14 @@ private:
 
 	//drives the arm motor to a setpoint
 	void MoveArmToSetPoint(int setPoint){
-		if(armEncoder->GetRaw() < setPoint - 50){
-			arm.Set(1);
-		}else if(armEncoder->GetRaw() > setPoint + 50){
-			arm.Set(-1);
+		//if arm is down too much
+		if(armEncoder->GetRaw() > (setPoint + 2)){
+			arm.Set(0.8); //drive arm up
+			//if arm is too far up
+		}else if(armEncoder->GetRaw() < (setPoint - 10)){
+			arm.Set(-0.2); //drive arm down
 		}else{
-			arm.Set(0);
+			arm.Set(0.3); //default to driving up so the arm shakes less
 		}
 	}
 
@@ -254,12 +276,14 @@ private:
 		int point = currentPoint;
 
 		//if set point button is pressed return its setpoint
-		if(armStick.GetRawButton(7)){
-			point = -100;
-		}else if(armStick.GetRawButton(8)){
-			point = 2000;
-		}else if(armStick.GetRawButton(11)){
-			point = 3000;
+		if(launchPad.GetRawButton(3)){
+			point = encoderZero;
+		}else if(launchPad.GetRawButton(4)){
+			point = encoderZero + 100;
+		}else if(launchPad.GetRawButton(5)){
+			point = encoderZero + 200;
+		}else if(launchPad.GetRawButton(6)){
+			point = encoderZero + 250;
 		}
 
 		return point;
@@ -332,7 +356,7 @@ private:
 		bool intakeButton = launchPad.GetRawButton(1);
 		bool shootButton = launchPad.GetRawButton(2);
 		//std::cout << "intake" << intakeButton << std::endl << "shoot" << shootButton << touchSensor.Get() << std::endl;
-		if(intakeButton == true && !touchSensor.Get()){
+		if(intakeButton == true){// && !touchSensor.Get()){
 			ballIntake1.Set(1);
 			ballIntake2.Set(1);
 		}else if(shootButton == true){
@@ -357,7 +381,7 @@ private:
 		red = (double)r; green = (double)g; blue = (double)b; clear = (double)c;
 		//red /= clear; green /= clear; blue /= clear; //this averages values with c value
 		//red *= 256; green *= 256; blue *= 256; //brings it back to normal rgb values; doesn't work
-		std::cout << "r = " << (int)red << "g = " << (int)green << "b = " << (int)blue << "c = " << (int)clear << std::endl;
+		//std::cout << "r = " << (int)red << "g = " << (int)green << "b = " << (int)blue << "c = " << (int)clear << std::endl;
 		if(r < (carpetRGB[0] + threshold) && r > (carpetRGB[0] - threshold)){
 			if(g < (carpetRGB[1] + threshold) && g > (carpetRGB[1] - threshold)){
 				if(b < (carpetRGB[2] + threshold) && b > (carpetRGB[2] - threshold)){
