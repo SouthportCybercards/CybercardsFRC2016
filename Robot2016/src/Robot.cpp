@@ -153,7 +153,7 @@ private:
 			}
 			if(currentTime < 2){
 				arm.Set(-0.1);
-			}else if(currentTime < 4.5){
+			}else if(currentTime < 3.25){
 				arm.Set(0);
 				robotDrive.TankDrive(-1.0, -1.0);
 			}else{
@@ -212,14 +212,16 @@ private:
 
 		float yAxis1Raw = 1 * leftStick.GetY();
 		float yAxis2Raw = 1 * rightStick.GetY();
-		float armStickYRaw = 1 * armStick.GetY();
+		//float armStickYRaw = 1 * armStick.GetY();
+		bool armStick1 = launchPad.GetRawButton(4);
+		bool armStick2 = launchPad.GetRawButton(10);
 
 
 		//Drive the drive motors when any input is within  -driveThreshold of 0.0
 		//NOTE - currently this doesn't scale up the input from 0.0 after the deadband region -- it just uses the raw value.
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
 		float yAxis2 = DeadZone(yAxis2Raw, driveThreshold, 0.0f);
-		float armStickY = DeadZone(armStickYRaw, armThreshold, 0.0f);
+		//float armStickY = DeadZone(armStickYRaw, armThreshold, 0.0f);
 
 		robotDrive.TankDrive(-yAxis1,-yAxis2); 	// drive
 		BallIntake();
@@ -227,11 +229,11 @@ private:
 		//setPoint = ReadSetPointButtons(setPoint);
 
 		//Drive arm to set point
-		if(armStickY != 0.0f){
+		if(armStick1 || armStick2){
 			//if joystick back(positive value)
-			if(armStickY > 0){
+			if(armStick2){
 				arm.Set(0.7);//drive arm up prev 0.7
-			}else if(armStickY < 0){
+			}else if(armStick1){
 				arm.Set(0);//drive arm down prev 0
 			}
 
@@ -240,7 +242,7 @@ private:
 		else{
 			MoveArmToSetPoint(setPoint);
 		}
-		std::cout << "encoder value = " << armEncoder->GetRaw() << " " << "setPoint = " << setPoint << " " << armStickY << std::endl;
+		std::cout << "encoder value = " << armEncoder->GetRaw() << " " << "setPoint = " << setPoint << " " << std::endl;
 
 
 		/*{Time()
@@ -283,7 +285,7 @@ private:
 		int point = currentPoint;
 
 		//if set point button is pressed return its setpoint
-		if(launchPad.GetRawButton(3)){
+		/*if(launchPad.GetRawButton(3)){
 			point = encoderZero;
 		}else if(launchPad.GetRawButton(4)){
 			point = encoderZero + 100;
@@ -291,7 +293,7 @@ private:
 			point = encoderZero + 200;
 		}else if(launchPad.GetRawButton(6)){
 			point = encoderZero + 250;
-		}
+		}*/
 
 		return point;
 	}
@@ -360,8 +362,8 @@ private:
 	}
 	void BallIntake(){
 
-		bool intakeButton = armStick.GetRawButton(1);
-		bool shootButton = armStick.GetRawButton(6);
+		bool intakeButton = launchPad.GetRawButton(1);
+		bool shootButton = launchPad.GetRawButton(6);
 		//std::cout << "intake" << intakeButton << std::endl << "shoot" << shootButton << touchSensor.Get() << std::endl;
 		if(intakeButton == true){// && !touchSensor.Get()){
 			ballIntake1.Set(1);
