@@ -41,7 +41,7 @@ private:
 	LiveWindow *lw = LiveWindow::GetInstance();
 	SendableChooser *chooser;
 	const std::string autoNameDefault = "Default";
-	const std::string autoNameCustom = "My Auto";
+	const std::string lowBarAuto = "Low Bar";
 	std::string autoSelected;
 	USBCamera *cam;
 	Encoder* armEncoder;
@@ -65,10 +65,8 @@ private:
 	ColorSensorPosition iSensorCounter = FRONT;
 	bool stopArmButton = false;
 	bool stopArmButtonPrevious = false;
-
 	void RobotInit()
 	{
-
 		CameraServer::GetInstance()->SetQuality(100);
 		cam->OpenCamera();
 		cam->SetBrightness(10);
@@ -81,7 +79,7 @@ private:
 		CameraServer::GetInstance()->StartAutomaticCapture(cameraptr);
 		chooser = new SendableChooser();
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
-		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
+		chooser->AddObject(lowBarAuto, (void*)&lowBarAuto);
 		SmartDashboard::PutData("Auto Modes", chooser);
 		//ColorSensors.push_back(&GenericColorSensor);
 		//ColorSensors.push_back(&BackColorSensor1);
@@ -105,11 +103,14 @@ private:
 	void AutonomousInit()
 	{
 		autoSelected = *((std::string*)chooser->GetSelected());
-		//std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
-		//std::cout << "Auto selected: " << autoSelected << std::endl;
+		std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
+		std::cout << "Auto selected: " << autoSelected << std::endl;
 		//Encoder *enc;
 		//enc = new Encoder(/*DIO port 0, 1*/0, 1, false, Encoder::EncodingType::k4X);
-		if(autoSelected == autoNameCustom){
+		if(autoSelected == lowBarAuto){
+			//if low bar auto is selected
+			CalibrateSensors();
+			autoTimer.Start();
 			//Custom Auto goes here
 		} else {
 			CalibrateSensors();
@@ -127,11 +128,41 @@ private:
 			//Default Auto goes here
 		}
 	}
-
 	void AutonomousPeriodic()
 	{
-		if(autoSelected == autoNameCustom){
-			//Custom Auto goes here
+		if(autoSelected == lowBarAuto){
+			//Low bar auto
+			double currentTime = autoTimer.Get();
+			/*if(currentTime < 0.5){
+				arm.Set(0.15);
+			}else if(armLimitSwitch.Get() == 1){
+				arm.Set(0);
+				encoderZero = armEncoder->GetRaw();
+				setPoint = encoderZero;
+				std::cout << "encoder being zeroed; value = " << encoderZero << std::endl;
+			}else if(currentTime > 6){
+				arm.Set(0);
+				//failsafe
+			}*/
+			bool frontGreen = CheckSensorForGreen(FRONT);  //ColorSensors[FRONT], FRONT);
+			bool backGreen = CheckSensorForGreen(BACK);
+			bool back2Green = CheckSensorForGreen(BACK2);
+			bool overGreenPrevious = overGreen;
+			if(frontGreen && backGreen && back2Green){ //checking all sensors for this
+				overGreen = true;
+				std::cout << "whole robot is over green" << std::endl;
+			}else{
+				overGreen = false;
+			}
+			if(currentTime < 2.5){
+				arm.Set(-0.1);
+			}else if(currentTime < 3.25){
+				arm.Set(0);
+				robotDrive.TankDrive(-0.75, 0.75);
+			}else{
+				robotDrive.StopMotor();
+			}
+			//end low bar autonomous
 		} else {
 			//LOGIC FOR STOPPING ROBOT
 			double currentTime = autoTimer.Get();
@@ -164,16 +195,13 @@ private:
 			}else{
 				robotDrive.StopMotor();
 			}
-
-			//if(overGreenPqrevious == false && overGreen == true && currentTime >= 2.0){
+			//if(overGreenPrevious == false && overGreen == true && currentTime >= 2.0){
 				//making sure we've driven at least 2.0 secs
 			//	robotDrive.StopMotor();
 			//}else
 			//if(currentTime > 3.5){
 			//	robotDrive.StopMotor();
 			//}
-
-			//Default Auto goes here
 			/*
 			 * Auton()
 			 * 		ColorSense()
@@ -207,34 +235,27 @@ private:
 
 	void TeleopPeriodic()
 	{
-
 		bool pushArmButton = launchPad.GetRawButton(3);
 		//TestColorSensor(ColorSensors[FRONT]);//testing first sensor, remove later
 		//std::cout << "getRaw() = " << armEncoder->GetRaw() << "setPoint=" << setPoint << std::endl;
 		//Local declarations
 		TestColorSensor();
 		float driveThreshold = 0.005;
-		float armThreshold = 0.2;
 		//Get the y-axis of the joystickk
-
 		float yAxis1Raw = 1 * leftStick.GetY();
 		float yAxis2Raw = 1 * rightStick.GetY();
 		//float armStickYRaw = 1 * armStick.GetY();
 		bool armStick1 = launchPad.GetRawButton(4);
 		bool armStick2 = launchPad.GetRawButton(10);
-
-
 		//Drive the drive motors when any input is within  -driveThreshold of 0.0
 		//NOTE - currently this doesn't scale up the input from 0.0 after the deadband region -- it just uses the raw value.
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
 		float yAxis2 = DeadZone(yAxis2Raw, driveThreshold, 0.0f);
 		//float armStickY = DeadZone(armStickYRaw, armThreshold, 0.0f);
-
 		robotDrive.TankDrive(-yAxis1,-yAxis2); 	// drive
 		BallIntake();
 		//read arm input buttons
 		//setPoint = ReadSetPointButtons(setPoint);
-
 		//Drive arm to set point
 		if(!pushArmButton && !armStopped){
 			if(armStick1 || armStick2){
@@ -244,17 +265,13 @@ private:
 			}else if(armStick1){
 				arm.Set(0);//drive arm down prev 0
 			}
-
 			setPoint = armEncoder->GetRaw();
 			}
 			else{
 					MoveArmToSetPoint(setPoint);
 			}
 		}
-
 		//std::cout << "encoder value = " << armEncoder->GetRaw() << " " << "setPoint = " << setPoint << " " << std::endl;
-
-
 		/*{Time()
 		 * INPUT[Camera() complete
 		 * 			SendToBase() complete
@@ -385,7 +402,6 @@ private:
 				}
 			}
 		}
-
 	}
 	void BallIntake(){
 
@@ -413,8 +429,8 @@ private:
 		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
 		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
 		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
-		double red, green, blue, clear;
-		red = (double)r; green = (double)g; blue = (double)b; clear = (double)c;
+		//double red, green, blue, clear;
+		//red = (double)r; green = (double)g; blue = (double)b; clear = (double)c;
 		//red /= clear; green /= clear; blue /= clear; //this averages values with c value
 		//red *= 256; green *= 256; blue *= 256; //brings it back to normal rgb values; doesn't work
 		//std::cout << "r = " << (int)red << "g = " << (int)green << "b = " << (int)blue << "c = " << (int)clear << std::endl;
@@ -437,7 +453,6 @@ private:
 		carpetRGB[0] = 0;
 		carpetRGB[1] = 0;
 		carpetRGB[2] = 0;
-
 		for (int i = 0; i < 3; i++){
 			tcaselect(i);
 			Wait(0.7);
@@ -445,15 +460,12 @@ private:
 			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
 			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
 			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
-
 			double red  = (double)r;
 			double green  = (double)g;
 			double blue  = (double)b;
-
 			//red /= clear; green /= clear; blue /= clear; //this averages values with c value
 			//red *= 256; green *= 256; blue *= 256; //brings it back to normal rgb value
 			std::cout << "r " << (int)red << "g " << (int)green << "b " << (int)blue;
-
 			carpetRGB[0] = carpetRGB[0] + (int)red;
 			carpetRGB[1] = carpetRGB[1] + (int)green;
 			carpetRGB[2] = carpetRGB[2] + (int)blue;
