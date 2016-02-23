@@ -12,7 +12,7 @@ public:
 		launchPad(3),
 		lw(NULL),
 		chooser(),
-		FrontColorSensor(I2C::kOnboard, 0x29),
+		GenericColorSensor(I2C::kOnboard, 0x29),
 		//BackColorSensor1(I2C::kOnboard, 0x29),
 		//BackColorSensor2(I2C::kOnboard, 0x29),
 		Multiplexer(I2C::kOnboard, 0x70),
@@ -20,6 +20,7 @@ public:
 		ColorSensorTimer(),
 		autoTimer(),
 		ballTimer(),
+		armPushTimer(),
 		arm(3),
 		ballIntake1(3),
 		ballIntake2(4),
@@ -44,7 +45,7 @@ private:
 	std::string autoSelected;
 	USBCamera *cam;
 	Encoder* armEncoder;
-	I2C FrontColorSensor; //FRONT
+	I2C GenericColorSensor; //FRONT
 	//I2C BackColorSensor1; //BACK
 	//I2C BackColorSensor2; //BACK2
 	I2C Multiplexer;
@@ -52,6 +53,7 @@ private:
 	Timer ColorSensorTimer;
 	Timer autoTimer;
 	Timer ballTimer;
+	Timer armPushTimer;
 	Talon arm, ballIntake1, ballIntake2;
 	DigitalInput touchSensor;
 	//DigitalInput armLimitSwitch;
@@ -59,7 +61,10 @@ private:
 	bool overGreen = true;
 	int carpetRGB[3] = {0};
 	int encoderZero = 0;
+	bool armStopped = false;
 	ColorSensorPosition iSensorCounter = FRONT;
+	bool stopArmButton = false;
+	bool stopArmButtonPrevious = false;
 
 	void RobotInit()
 	{
@@ -78,7 +83,7 @@ private:
 		chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
 		chooser->AddObject(autoNameCustom, (void*)&autoNameCustom);
 		SmartDashboard::PutData("Auto Modes", chooser);
-		//ColorSensors.push_back(&FrontColorSensor);
+		//ColorSensors.push_back(&GenericColorSensor);
 		//ColorSensors.push_back(&BackColorSensor1);
 		//ColorSensors.push_back(&BackColorSensor2);
 		//for(unsigned int i = 0; i < ColorSensors.size(); i++){//loops through vector and initializes all color sensors.
@@ -202,6 +207,8 @@ private:
 
 	void TeleopPeriodic()
 	{
+
+		bool pushArmButton = launchPad.GetRawButton(3);
 		//TestColorSensor(ColorSensors[FRONT]);//testing first sensor, remove later
 		//std::cout << "getRaw() = " << armEncoder->GetRaw() << "setPoint=" << setPoint << std::endl;
 		//Local declarations
@@ -229,8 +236,9 @@ private:
 		//setPoint = ReadSetPointButtons(setPoint);
 
 		//Drive arm to set point
-		if(armStick1 || armStick2){
-			//if joystick back(positive value)
+		if(!pushArmButton && !armStopped){
+			if(armStick1 || armStick2){
+				//if joystick back(positive value)
 			if(armStick2){
 				arm.Set(0.7);//drive arm up prev 0.7
 			}else if(armStick1){
@@ -238,11 +246,13 @@ private:
 			}
 
 			setPoint = armEncoder->GetRaw();
+			}
+			else{
+					MoveArmToSetPoint(setPoint);
+			}
 		}
-		else{
-			MoveArmToSetPoint(setPoint);
-		}
-		std::cout << "encoder value = " << armEncoder->GetRaw() << " " << "setPoint = " << setPoint << " " << std::endl;
+
+		//std::cout << "encoder value = " << armEncoder->GetRaw() << " " << "setPoint = " << setPoint << " " << std::endl;
 
 
 		/*{Time()
@@ -254,16 +264,32 @@ private:
 		 * INPUT[Read sensor()
 		 * 			Deadzone()
 		 * DRIVE[Drivebase(auto, ) complete
-		 * DRIVE[DriveLift()
+		 * DRIVE[DriveLift() complete
 		 * 			read()
 		 * 			drive()
 		 * DRIVE[DriveHook()
-		 * DRIVE[DriveBallStuff()
+		 * DRIVE[DriveBallStuff() complete
 		 *
-		 * read controls
-		 * move arm to set points (0, 20, 90, 110 degrees)
-		 * "deal with the gas cylinder"
+		 * read controls complete
+		 * move arm to set points (0, 20, 90, 110 degrees) complete
+		 * "deal with the gas cylinder" not needed
 		 */
+		stopArmButtonPrevious = stopArmButton;
+		stopArmButton = launchPad.GetRawButton(2);
+		//armstopped starts out false. turn it to true if the button goes from false to true(button press),
+		//it toggles back and forth
+		if(stopArmButtonPrevious == false && stopArmButton == true){
+			armStopped = !armStopped;
+		}
+
+		if(pushArmButton){
+			arm.Set(-0.2);
+		}
+		if(armStopped){
+			arm.Set(0.0);
+		}
+
+
 	}
 
 	//drives the arm motor to a setpoint
@@ -285,6 +311,7 @@ private:
 		int point = currentPoint;
 
 		//if set point button is pressed return its setpoint
+		//this section is for if we added buttons for setpoints, now not necessary
 		/*if(launchPad.GetRawButton(3)){
 			point = encoderZero;
 		}else if(launchPad.GetRawButton(4)){
@@ -317,9 +344,9 @@ private:
 			Wait(0.7);
 			tcaselect(i);
 			//remember to or the command bit for both reading and writing everything
-			FrontColorSensor.Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_700MS);
-			FrontColorSensor.Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_1X); //This is the Gain
-			FrontColorSensor.Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN | TCS_ENABLE_WEN);
+			GenericColorSensor.Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_700MS);
+			GenericColorSensor.Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_1X); //This is the Gain
+			GenericColorSensor.Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN | TCS_ENABLE_WEN);
 		}
 	}
 	//This function was made to test a single color sensor. Later, there will be a single function for reading all color sensors
@@ -340,10 +367,10 @@ private:
 				uint8_t r = 0;
 				uint8_t g = 0;
 				uint8_t b = 0;
-				FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
-				FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-				FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-				FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+				GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+				GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+				GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+				GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
 				//std::cout << currentTime << std::endl;
 				std::cout << iSensorCounter << "; " << "r= " << (int)r << "g= "<< (int)g << "b= " << (int)b << "c=" << (int)c << std::endl;
 				if(iSensorCounter == FRONT){
@@ -382,10 +409,10 @@ private:
 		uint8_t b = 0;
 		uint8_t c = 0;
 		int threshold = 50;
-		FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-		FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-		FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-		FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
 		double red, green, blue, clear;
 		red = (double)r; green = (double)g; blue = (double)b; clear = (double)c;
 		//red /= clear; green /= clear; blue /= clear; //this averages values with c value
@@ -414,10 +441,10 @@ private:
 		for (int i = 0; i < 3; i++){
 			tcaselect(i);
 			Wait(0.7);
-			FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-			FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-			FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-			FrontColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
+			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
+			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
+			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
+			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
 
 			double red  = (double)r;
 			double green  = (double)g;
