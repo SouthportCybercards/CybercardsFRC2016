@@ -100,8 +100,9 @@ private:
 	 */
 	void AutonomousInit()
 	{
+		chooser->AddObject("Low Bar", "Low Bar");
 		autoSelected = *((std::string*)chooser->GetSelected());
-		std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
+		//std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
 		std::cout << "Auto selected: " << autoSelected << std::endl;
 		//Encoder *enc;
 		//enc = new Encoder(/*DIO port 0, 1*/0, 1, false, Encoder::EncodingType::k4X);
@@ -303,15 +304,6 @@ private:
 		}
 
 		if(pushArmButton){
-			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
-			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
-			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
-			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
-			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
-			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
-			//|
-			//|
-			//\/
 			arm.Set(-0.2); //-0.2 might be a little much
 		}
 		if(armStopped){
@@ -328,7 +320,7 @@ private:
 			arm.Set(0.5); //drive arm up prev 0.6
 			//if arm is too far up
 		}else if(armEncoder->GetRaw() < (setPoint - 10)){
-			arm.Set(-0.1); //drive arm down prev -0.2
+			arm.Set(-0.2); //drive arm down prev -0.2
 		}else{
 			arm.Set(0.3); //default to driving up so the arm shakes less prev 0.3
 		}
