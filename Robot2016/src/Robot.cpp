@@ -13,8 +13,6 @@ public:
 		lw(NULL),
 		chooser(),
 		GenericColorSensor(I2C::kOnboard, 0x29),
-		//BackColorSensor1(I2C::kOnboard, 0x29),
-		//BackColorSensor2(I2C::kOnboard, 0x29),
 		Multiplexer(I2C::kOnboard, 0x70),
 		//ColorSensors(),
 		ColorSensorTimer(),
@@ -154,11 +152,15 @@ private:
 			}else{
 				overGreen = false;
 			}
-			if(currentTime < 2.5){
+			//Dylan
+			//Dylan
+			//Dylan
+			//Dylan: total time to drive during auto is 3.5 - 2.0 = 1.5
+			if(currentTime < 2.0){
 				arm.Set(-0.1);
-			}else if(currentTime < 3.25){
+			}else if(currentTime < 3.5){
 				arm.Set(0);
-				robotDrive.TankDrive(-0.75, 0.75);
+				robotDrive.TankDrive(-0.60, -0.60); // they might also ask you to change this(lowbar speed)
 			}else{
 				robotDrive.StopMotor();
 			}
@@ -187,6 +189,7 @@ private:
 			}else{
 				overGreen = false;
 			}
+			//Dylan: Time to drive during auto is 3.25 - 2.0 = 1.25
 			if(currentTime < 2){
 				arm.Set(-0.1);
 			}else if(currentTime < 3.25){
@@ -300,7 +303,16 @@ private:
 		}
 
 		if(pushArmButton){
-			arm.Set(-0.2);
+			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
+			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
+			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
+			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
+			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
+			//DYLAN CHANGE THIS TO FIX ARM DOWN MANUAL BUTTON
+			//|
+			//|
+			//\/
+			arm.Set(-0.2); //-0.2 might be a little much
 		}
 		if(armStopped){
 			arm.Set(0.0);
