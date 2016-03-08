@@ -100,7 +100,6 @@ private:
 	 */
 	void AutonomousInit()
 	{
-		chooser->AddObject("Low Bar", "Low Bar");
 		autoSelected = *((std::string*)chooser->GetSelected());
 		//std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
 		std::cout << "Auto selected: " << autoSelected << std::endl;
@@ -153,13 +152,9 @@ private:
 			}else{
 				overGreen = false;
 			}
-			//Dylan
-			//Dylan
-			//Dylan
-			//Dylan: total time to drive during auto is 3.5 - 2.0 = 1.5
 			if(currentTime < 2.0){
 				arm.Set(-0.1);
-			}else if(currentTime < 3.5){
+			}else if(currentTime < 5.0){
 				arm.Set(0);
 				robotDrive.TankDrive(-0.60, -0.60); // they might also ask you to change this(lowbar speed)
 			}else{
