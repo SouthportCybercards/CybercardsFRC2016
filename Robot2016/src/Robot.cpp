@@ -86,12 +86,7 @@ class Robot: public IterativeRobot
         chooser->AddObject(porkCutletAuto, (void*)&porkCutletAuto);
         chooser->AddObject(cheesyFriesAuto, (void*)&cheesyFriesAuto);
         SmartDashboard::PutData("Auto Modes", chooser);
-        //ColorSensors.push_back(&GenericColorSensor);
-        //ColorSensors.push_back(&BackColorSensor1);
-        //ColorSensors.push_back(&BackColorSensor2);
-        //for(unsigned int i = 0; i < ColorSensors.size(); i++){//loops through vector and initializes all color sensors.
-            InitColorSensor();
-        //}
+        InitColorSensor();
         armEncoder->SetMaxPeriod(.1);
         armEncoder->SetMinRate(10);
         armEncoder->SetDistancePerPulse(5);
@@ -125,11 +120,11 @@ class Robot: public IterativeRobot
 				arm.Set(0);
 				robotDrive.TankDrive(-0.6, -0.6);
 			/*}else if(currentTime < 6.5){
-				robotDrive.TankDrive(1, -1);//turn right
+				robotDrive.TankDrive(1, -1);//turn right for 1.0
 			}else if(currentTime < 8.5){  				(needs testing!)
-				robotDrive.TankDrive(-0.7, -0.7);
+				robotDrive.TankDrive(-0.7, -0.7); go back for 2.0
 			}else if(currentTime < 11.0){
-				ballIntake1.Set(-1.0);
+				ballIntake1.Set(-1.0); outtake for 2.5
 				ballIntake2.Set(-1.0);*/
 			}else{
 				robotDrive.StopMotor();
@@ -140,33 +135,34 @@ class Robot: public IterativeRobot
             //Pork Cutlet here
             float currentTime = autoTimer.Get();
             if(currentTime < 1.0){
-                arm.Set(-0.1);
+                arm.Set(-0.1); //arm slowly knocked down for 1 sec
             }else{
                 CrossPorkCutlet();
             }
         }else if(autoSelected == cheesyFriesAuto){
             float currentTime = autoTimer.Get();
             if(currentTime < 1.0){
-                arm.Set(0.2);
+                arm.Set(0.2); //arm forced up for a full second
             }else{
                 CrossCheesyFries();
             }
         } else {
             float currentTime = autoTimer.Get();
             if(currentTime < 2){
-                arm.Set(-0.1);
+                arm.Set(-0.1); //2 seconds of knocking arm down
             }else if(currentTime < 3.5){
                 arm.Set(0);
-                robotDrive.TankDrive(-1.0, -1.0);
+                robotDrive.TankDrive(-1.0, -1.0); //full speed for 1.5 secs. about half the field across
             }else if(currentTime < 4.5){
-                robotDrive.TankDrive(-0.5, -0.5);
+                robotDrive.TankDrive(-0.5, -0.5); //half speed for 1 sec because Danny wanted it?
             }else{
-            robotDrive.StopMotor();
+            	robotDrive.StopMotor();
             }
         }
+        float autoTimerValue = autoTimer.Get();
         //end all the autos
-        if(autoTimer > 15){
-        	autoTimer.Reset();
+        if(autoTimerValue > 15.0){
+        	autoTimer.Reset(); //ends all timers on its own
         }
     }
 	void TeleopInit()
@@ -179,9 +175,9 @@ class Robot: public IterativeRobot
 		//Local declarations
 		//TestColorSensor();
 		float driveThreshold = 0.005;
-		//Get the y-axis of the joystickk
-		float yAxis1Raw = 1 * leftStick.GetY();
-		float yAxis2Raw = 1 * rightStick.GetY();
+		//Get the y-axis of the joystick
+		float yAxis1Raw = 1 * leftStick.GetY();//############3was 1*
+		float yAxis2Raw = 1 * rightStick.GetY();//###########was 1*
 		//float armStickYRaw = 1 * armStick.GetY();
 		bool armStick1 = launchPad.GetRawButton(4);
 		bool armStick2 = launchPad.GetRawButton(10);
@@ -190,7 +186,8 @@ class Robot: public IterativeRobot
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
 		float yAxis2 = DeadZone(yAxis2Raw, driveThreshold, 0.0f);
 		//float armStickY = DeadZone(armStickYRaw, armThreshold, 0.0f);
-		robotDrive.TankDrive(-yAxis1,-yAxis2); // drive
+		robotDrive.TankDrive(0.5 * -yAxis1, 0.5 * -yAxis2); // Scaling down by 0.5 for Ms. Plowie
+		std::cout << "joystick = " << -yAxis1 << "joy2" << -yAxis2;
 		BallIntake();
 		//read arm input buttons
 		//setPoint = ReadSetPointButtons(setPoint);
@@ -200,7 +197,7 @@ class Robot: public IterativeRobot
 				//if joystick back(positive value)
 				if(armStick2){
 					arm.Set(0.5);//drive arm up prev 0.7
-					}else if(armStick1){
+				}else if(armStick1){
 					arm.Set(-0.2);//drive arm down prev 0
 				}
 				setPoint = armEncoder->GetRaw();
@@ -215,7 +212,7 @@ class Robot: public IterativeRobot
 		if(stopArmButtonPrevious == false && stopArmButton == true){
 			armStopped = !armStopped;
 		}
-		if(pushArmButton){
+		if(pushArmButton){ //this is hardly needed anymore but will keep until we need another button
 			arm.Set(-0.2); //-0.2 might be a little much
 		}
 		if(armStopped){
@@ -228,13 +225,13 @@ class Robot: public IterativeRobot
 		if(armEncoder->GetRaw() > (setPoint + 2)){
 			arm.Set(0.25); //drive arm up prev 0.6
 			//if arm is too far up
-			}else if(armEncoder->GetRaw() < (setPoint - 2)){
+		}else if(armEncoder->GetRaw() < (setPoint - 2)){
 			arm.Set(-0.6); //drive arm down prev -0.2
-			}else{
+		}else{
 			arm.Set(0.0); //default to driving up so the arm shakes less prev 0.3
 		}
 	}
-	//reads arm setpoint buttons and selects destination
+	//reads arm setpoint buttons and selects destination (currently not used)
 	int ReadSetPointButtons(int currentPoint){
 		//default set point to the current encoder value
 		int point = currentPoint;
@@ -264,7 +261,7 @@ class Robot: public IterativeRobot
         }
         return target;
     }
-    //Initializes a single color sensor. Pointer should be passed in with &sensor or from the vector of *I2C's
+    //Initializes all color sensors. Will wait, which causes some auto weirdness(but it's become a thing now)
     void InitColorSensor(){
         for(int i = 0; i < 3; i++){
             Wait(0.7);
@@ -394,13 +391,14 @@ class Robot: public IterativeRobot
 		if(currentTime == 0.0){
 			tempTimer.Start();
 		}else if(currentTime < 0.8){
-			robotDrive.Drive(0.5, 0.5);
+			robotDrive.Drive(0.5, 0.5); //Half-speed forward for 0.8 seconds (~5 m/s for 1.8m + accel)
 		}else if(currentTime < 1.5){
-			arm.Set(-0.2);
+			arm.Set(-0.2); //drop arm for 0.7 secs. keep in mind it's still powering down
 			robotDrive.StopMotor();
 		}else if(currentTime < 2.75){
-			robotDrive.Drive(1.0, 1.0);
+			robotDrive.Drive(1.0, 1.0); //full speed ahead for 1.25 secs
 		}else{
+			arm.Set(0); //turn everything off and reset tiemr
 			robotDrive.StopMotor();
 			tempTimer.Reset();
 			autoTimer.Reset();
@@ -412,15 +410,15 @@ class Robot: public IterativeRobot
 			tempTimer.Start();
 		}else if(currentTime < 2.0){
 			robotDrive.Drive(0.3, 0.3);
-			ballIntake1.Set(-1);
+			ballIntake1.Set(-1); //drive slowly forward and outtake for 2.0
 			ballIntake2.Set(-1);
 		}else if(currentTime < 3.5){
-			robotDrive.Drive(1.0, 1.0);
+			robotDrive.Drive(1.0, 1.0); //still outtaking and full speed forward for 1.5
 		}else{
-			robotDrive.StopMotor();
+			robotDrive.StopMotor(); //stop everything
 			ballIntake1.Set(0);
 			ballIntake2.Set(0);
-			tempTimer.Reset()
+			tempTimer.Reset();
 		}
 	}
 };
