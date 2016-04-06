@@ -8,8 +8,8 @@ class Robot: public IterativeRobot
 		robotDrive(6, 7, 9, 8), // these must be initialized in the same order
 		leftStick(0),
 		rightStick(1),
-		armStick(2),
-		launchPad(3),
+		armStick(3),
+		launchPad(2),
 		lw(NULL),
 		chooser(),
 		GenericColorSensor(I2C::kOnboard, 0x29),
