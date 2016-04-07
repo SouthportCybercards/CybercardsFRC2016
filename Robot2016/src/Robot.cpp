@@ -1,6 +1,4 @@
 #include "WPILib.h"
-#include "ColorSensorMacros.h"
-enum ColorSensorPosition{FRONT, BACK, BACK2}; //access front, back, or back2 color sensors with ColorSensors[FRONT], etc.
 class Robot: public IterativeRobot
 {
     public:
@@ -8,23 +6,16 @@ class Robot: public IterativeRobot
 		robotDrive(6, 7, 9, 8), // these must be initialized in the same order
 		leftStick(0),
 		rightStick(1),
-		armStick(3),
 		launchPad(2),
 		lw(NULL),
 		chooser(),
-		GenericColorSensor(I2C::kOnboard, 0x29),
-		Multiplexer(I2C::kOnboard, 0x70),
-		//ColorSensors(),
-		ColorSensorTimer(),
 		autoTimer(),
 		ballTimer(),
 		armPushTimer(),
-		tempTimer(),
+		defenseTimer(),
 		arm(3),
-		ballIntake1(3),
-		ballIntake2(4),
+		ballIntake(4),
 		touchSensor(2)
-		//armLimitSwitch(0)
     {
     	//ROBOT CONSTRUCTOR
         robotDrive.SetExpiration(0.1);
@@ -37,7 +28,7 @@ class Robot: public IterativeRobot
     }
     private:
     RobotDrive robotDrive;
-    Joystick leftStick, rightStick, armStick, launchPad;
+    Joystick leftStick, rightStick, launchPad;
     LiveWindow *lw = LiveWindow::GetInstance();
     SendableChooser *chooser;
     const std::string autoNameDefault = "Default";
@@ -47,25 +38,15 @@ class Robot: public IterativeRobot
     std::string autoSelected;
     USBCamera *cam;
     Encoder* armEncoder;
-    I2C GenericColorSensor; //FRONT
-    //I2C BackColorSensor1; //BACK
-    //I2C BackColorSensor2; //BACK2
-    I2C Multiplexer;
-    //std::vector<I2C*> ColorSensors; //our vector of color sensor pointers; use for everything instead of ColorSensor1
-    Timer ColorSensorTimer;
     Timer autoTimer;
     Timer ballTimer;
     Timer armPushTimer;
-    Timer tempTimer;
-    Talon arm, ballIntake1, ballIntake2;
+    Timer defenseTimer;
+    Talon arm, ballIntake;
     DigitalInput touchSensor;
-    //DigitalInput armLimitSwitch;
     int setPoint = 0;
-    bool overGreen = true;
-    int carpetRGB[3] = {0};
     int encoderZero = 0;
     bool armStopped = false;
-    ColorSensorPosition iSensorCounter = FRONT;
     bool stopArmButton = false;
     bool stopArmButtonPrevious = false;
     void RobotInit()
@@ -86,12 +67,6 @@ class Robot: public IterativeRobot
         chooser->AddObject(porkCutletAuto, (void*)&porkCutletAuto);
         chooser->AddObject(cheesyFriesAuto, (void*)&cheesyFriesAuto);
         SmartDashboard::PutData("Auto Modes", chooser);
-        //ColorSensors.push_back(&GenericColorSensor);
-        //ColorSensors.push_back(&BackColorSensor1);
-        //ColorSensors.push_back(&BackColorSensor2);
-        //for(unsigned int i = 0; i < ColorSensors.size(); i++){//loops through vector and initializes all color sensors.
-            InitColorSensor();
-        //}
         armEncoder->SetMaxPeriod(.1);
         armEncoder->SetMinRate(10);
         armEncoder->SetDistancePerPulse(5);
@@ -108,11 +83,7 @@ class Robot: public IterativeRobot
     void AutonomousInit()
     {
         autoSelected = *((std::string*)chooser->GetSelected());
-        //std::string autoSelected = SmartDashboard::GetString("Auto Selector", autoNameDefault);
         std::cout << "Auto selected: " << autoSelected << std::endl;
-        //Encoder *enc;
-        //enc = new Encoder(/*DIO port 0, 1*/0, 1, false, Encoder::EncodingType::k4X);
-        CalibrateSensors();
         autoTimer.Start();
     }
     void AutonomousPeriodic()
@@ -129,12 +100,10 @@ class Robot: public IterativeRobot
 			}else if(currentTime < 8.5){  				(needs testing!)
 				robotDrive.TankDrive(-0.7, -0.7);
 			}else if(currentTime < 11.0){
-				ballIntake1.Set(-1.0);
-				ballIntake2.Set(-1.0);*/
+				ballIntake.Set(-1.0);*/
 			}else{
 				robotDrive.StopMotor();
-				//ballIntake1.Set(0);
-				//ballIntake2.Set(0);
+				//ballIntake.Set(0);
             }
         }else if(autoSelected == porkCutletAuto){
             //Pork Cutlet here
@@ -175,25 +144,20 @@ class Robot: public IterativeRobot
 	void TeleopPeriodic()
 	{
 		bool pushArmButton = launchPad.GetRawButton(3);
-		//std::cout << "getRaw() = " << armEncoder->GetRaw() << "setPoint=" << setPoint << std::endl;
 		//Local declarations
-		//TestColorSensor();
 		float driveThreshold = 0.005;
 		//Get the y-axis of the joystickk
 		float yAxis1Raw = 1 * leftStick.GetY();
 		float yAxis2Raw = 1 * rightStick.GetY();
-		//float armStickYRaw = 1 * armStick.GetY();
 		bool armStick1 = launchPad.GetRawButton(4);
 		bool armStick2 = launchPad.GetRawButton(10);
 		//Drive the drive motors when any input is within -driveThreshold of 0.0
 		//NOTE - currently this doesn't scale up the input from 0.0 after the deadband region -- it just uses the raw value.
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
 		float yAxis2 = DeadZone(yAxis2Raw, driveThreshold, 0.0f);
-		//float armStickY = DeadZone(armStickYRaw, armThreshold, 0.0f);
 		robotDrive.TankDrive(-yAxis1,-yAxis2); // drive
 		BallIntake();
 		//read arm input buttons
-		//setPoint = ReadSetPointButtons(setPoint);
 		//Drive arm to set point
 		if(!pushArmButton && !armStopped){
 			if(armStick1 || armStick2){
@@ -234,23 +198,6 @@ class Robot: public IterativeRobot
 			arm.Set(0.0); //default to driving up so the arm shakes less prev 0.3
 		}
 	}
-	//reads arm setpoint buttons and selects destination
-	int ReadSetPointButtons(int currentPoint){
-		//default set point to the current encoder value
-		int point = currentPoint;
-		//if set point button is pressed return its setpoint
-		//this section is for if we added buttons for setpoints, now not necessary
-		/*if(launchPad.GetRawButton(3)){
-			point = encoderZero;
-			}else if(launchPad.GetRawButton(4)){
-			point = encoderZero + 100;
-			}else if(launchPad.GetRawButton(5)){
-			point = encoderZero + 200;
-			}else if(launchPad.GetRawButton(6)){
-			point = encoderZero + 250;
-		}*/
-		return point;
-	}
     void TestPeriodic()
     {
         lw->Run();
@@ -264,135 +211,22 @@ class Robot: public IterativeRobot
         }
         return target;
     }
-    //Initializes a single color sensor. Pointer should be passed in with &sensor or from the vector of *I2C's
-    void InitColorSensor(){
-        for(int i = 0; i < 3; i++){
-            Wait(0.7);
-            tcaselect(i);
-            //remember to or the command bit for both reading and writing everything
-            GenericColorSensor.Write(TCS_COMMAND_BIT | TCS_ATIME, TCS34725_INTEGRATIONTIME_700MS);
-            GenericColorSensor.Write(TCS_COMMAND_BIT | TCS_CONTROL, TCS34725_GAIN_1X); //This is the Gain
-            GenericColorSensor.Write(TCS_COMMAND_BIT | TCS_ENABLE, TCS_ENABLE_PON | TCS_ENABLE_AEN | TCS_ENABLE_WEN);
-        }
-    }
-    //This function was made to test a single color sensor. Later, there will be a single function for reading all color sensors
-    //and interpreting data.
-	void TestColorSensor(){
-		float currentTime;
-		currentTime = ColorSensorTimer.Get();
-		if(currentTime == 0.0){
-			ColorSensorTimer.Start();
-			tcaselect(FRONT);
-		}else if(ColorSensorTimer.HasPeriodPassed((float)0.7)){
-			//change this to shorter time later
-			if(currentTime > 10){
-				ColorSensorTimer.Reset();
-				tcaselect(FRONT);
-			}else{
-				uint8_t c = 0;
-				uint8_t r = 0;
-				uint8_t g = 0;
-				uint8_t b = 0;
-				GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
-				GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-				GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-				GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-				//std::cout << currentTime << std::endl;
-				std::cout << iSensorCounter << "; " << "r= " << (int)r << "g= "<< (int)g << "b= " << (int)b << "c=" << (int)c << std::endl;
-				if(iSensorCounter == FRONT){
-					iSensorCounter = BACK;
-					tcaselect(1);
-				}else if(iSensorCounter == BACK){
-					iSensorCounter = BACK2;
-					tcaselect(2);
-				}else{
-					iSensorCounter = FRONT;
-					tcaselect(0);
-				}
-			}
-		}
-	}
 	void BallIntake(){
 		bool intakeButton = launchPad.GetRawButton(1);
 		bool shootButton = launchPad.GetRawButton(6);
-		//std::cout << "intake" << intakeButton << std::endl << "shoot" << shootButton << touchSensor.Get() << std::endl;
-		if(intakeButton == true){// && !touchSensor.Get()){
-			ballIntake1.Set(1);
-			ballIntake2.Set(1);
-			}else if(shootButton == true){
-			ballIntake1.Set(-1);
-			ballIntake2.Set(-1);
-			}else{
-			ballIntake1.Set(0);
-			ballIntake2.Set(0);
+		if(intakeButton == true){
+			ballIntake.Set(1);
+		}else if(shootButton == true){
+			ballIntake.Set(-1);
+		}else{
+			ballIntake.Set(0);
 		}
-	}
-	bool CheckSensorForGreen(ColorSensorPosition position){ //pass in sensor and position
-		uint8_t r = 0;
-		uint8_t g = 0;
-		uint8_t b = 0;
-		uint8_t c = 0;
-		int threshold = 50;
-		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-		GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
-		//float red, green, blue, clear;
-		//red = (float)r; green = (float)g; blue = (float)b; clear = (float)c;
-		//red /= clear; green /= clear; blue /= clear; //this averages values with c value
-		//red *= 256; green *= 256; blue *= 256; //brings it back to normal rgb values; doesn't work
-		//std::cout << "r = " << (int)red << "g = " << (int)green << "b = " << (int)blue << "c = " << (int)clear << std::endl;
-		if(r < (carpetRGB[0] + threshold) && r > (carpetRGB[0] - threshold)){
-			if(g < (carpetRGB[1] + threshold) && g > (carpetRGB[1] - threshold)){
-				if(b < (carpetRGB[2] + threshold) && b > (carpetRGB[2] - threshold)){
-					return true;
-					std::cout << "we found green at " << position;
-				}
-			}
-		}
-		tcaselect(position);
-		return false;
-	}
-	void CalibrateSensors(){
-		uint8_t r = 0;
-		uint8_t g = 0;
-		uint8_t b = 0;
-		uint8_t c = 0;
-		carpetRGB[0] = 0;
-		carpetRGB[1] = 0;
-		carpetRGB[2] = 0;
-		for (int i = 0; i < 3; i++){
-			tcaselect(i);
-			Wait(0.7); //this causes weirdness in auto
-			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_RDATAL, 1, &r);
-			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_GDATAL, 1, &g);
-			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_BDATAL, 1, &b);
-			GenericColorSensor.Read(TCS_COMMAND_BIT | TCS_CDATAL, 1, &c);
-			float red = (float)r;
-			float green = (float)g;
-			float blue = (float)b;
-			//red /= clear; green /= clear; blue /= clear; //this averages values with c value
-			//red *= 256; green *= 256; blue *= 256; //brings it back to normal rgb value
-			std::cout << "r " << (int)red << "g " << (int)green << "b " << (int)blue;
-			carpetRGB[0] = carpetRGB[0] + (int)red;
-			carpetRGB[1] = carpetRGB[1] + (int)green;
-			carpetRGB[2] = carpetRGB[2] + (int)blue;
-		}
-		carpetRGB[0] /= 3;
-		carpetRGB[1] /= 3;
-		carpetRGB[2] /= 3;
-		std::cout << "Done Calibrating, 0= " << carpetRGB[0] << ", "<< "1= " << carpetRGB[1] << ", " << "2= " << carpetRGB[2] << std::endl;
-	}
-	//sets which mux address to write to
-	void tcaselect(uint8_t i) {
-		if(i > 7) return;
-		Multiplexer.Write(0x70, (uint8_t)1 << i);
 	}
 	void CrossCheesyFries(){
 		std::cout << "cheesy fries being called" << std::endl;
-		float currentTime = tempTimer.Get();
+		float currentTime = defenseTimer.Get();
 		if(currentTime == 0.0){
-			tempTimer.Start();
+			defenseTimer.Start();
 		}else if(currentTime < 0.8){
 			robotDrive.Drive(0.5, 0.5);
 		}else if(currentTime < 1.5){
@@ -402,25 +236,23 @@ class Robot: public IterativeRobot
 			robotDrive.Drive(1.0, 1.0);
 		}else{
 			robotDrive.StopMotor();
-			tempTimer.Reset();
+			defenseTimer.Reset();
 			autoTimer.Reset();
 		}
 	}
 	void CrossPorkCutlet(){
-		float currentTime = tempTimer.Get();
+		float currentTime = defenseTimer.Get();
 		if(currentTime == 0.0){
-			tempTimer.Start();
+			defenseTimer.Start();
 		}else if(currentTime < 2.0){
 			robotDrive.Drive(0.3, 0.3);
-			ballIntake1.Set(-1);
-			ballIntake2.Set(-1);
+			ballIntake.Set(-1);
 		}else if(currentTime < 3.5){
 			robotDrive.Drive(1.0, 1.0);
 		}else{
 			robotDrive.StopMotor();
-			ballIntake1.Set(0);
-			ballIntake2.Set(0);
-			tempTimer.Reset()
+			ballIntake.Set(0);
+			defenseTimer.Reset();
 		}
 	}
 };
