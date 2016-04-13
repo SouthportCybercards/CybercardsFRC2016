@@ -134,7 +134,7 @@ class Robot: public IterativeRobot
             }
         }
         //end all the autos
-        if(autoTimer > 15){
+        if(autoTimer.Get() > 15){
         	autoTimer.Reset();
         }
     }
@@ -188,15 +188,21 @@ class Robot: public IterativeRobot
 	}
 		//drives the arm motor to a setpoint
 	void MoveArmToSetPoint(int setPoint){
-		//if arm is down too much
-		if(armEncoder->GetRaw() > (setPoint + 2)){
-			arm.Set(0.25); //drive arm up prev 0.6
-			//if arm is too far up
-			}else if(armEncoder->GetRaw() < (setPoint - 2)){
-			arm.Set(-0.6); //drive arm down prev -0.2
-			}else{
-			arm.Set(0.0); //default to driving up so the arm shakes less prev 0.3
-		}
+		int armEncoderRaw = armEncoder->GetRaw();
+		//if encoder is too high, we need to drive arm up
+		//if encoder is too low, we need to drive down
+		int difference = armEncoderRaw - setPoint; // The difference; it will be positive if
+		//arm needs to go up, negative if arm needs to go down e.g. enc 99- set 98 = 1 delta or -98 - -97 = -1 delta
+		difference = std::min(difference, 12);
+		difference = std::max(difference, -12); //clamping values to -12(needs tweaking)
+		int speed = (difference / 20); //will return value between -0.6 to 0.6 proportional to
+		//int speed = 0.262 * std::cbrt(difference);
+		//the difference
+		//This equation can be replaced by the equation (0.262 * cuberoot(x))
+
+
+
+
 	}
     void TestPeriodic()
     {
