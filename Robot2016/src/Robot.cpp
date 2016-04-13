@@ -4,18 +4,20 @@ class Robot: public IterativeRobot
     public:
     Robot() :
 		robotDrive(6, 7, 9, 8), // these must be initialized in the same order
-		leftStick(0),
-		rightStick(1),
-		launchPad(2),
+		tapeDrive(0),//#######tapemeasure is on motor port 0
+		winchDrive(1),//####thrusterbox is on motor port 1
+		leftStick(0),//###usb 0
+		rightStick(1),//####usb1
+		launchPad(2),//####usb2
 		lw(NULL),
 		chooser(),
 		autoTimer(),
 		ballTimer(),
 		armPushTimer(),
 		defenseTimer(),
-		arm(3),
-		ballIntake(4),
-		touchSensor(2)
+		arm(3),//#####motor port 3
+		ballIntake(4),//####motor port 4
+		touchSensor(2)//####DIO2
     {
     	//ROBOT CONSTRUCTOR
         robotDrive.SetExpiration(0.1);
@@ -28,6 +30,8 @@ class Robot: public IterativeRobot
     }
     private:
     RobotDrive robotDrive;
+    Talon tapeDrive;
+    Talon winchDrive;
     Joystick leftStick, rightStick, launchPad;
     LiveWindow *lw = LiveWindow::GetInstance();
     SendableChooser *chooser;
@@ -157,6 +161,7 @@ class Robot: public IterativeRobot
 		float yAxis2 = DeadZone(yAxis2Raw, driveThreshold, 0.0f);
 		robotDrive.TankDrive(-yAxis1,-yAxis2); // drive
 		BallIntake();
+		ScaleControl();
 		//read arm input buttons
 		//Drive arm to set point
 		if(!pushArmButton && !armStopped){
@@ -185,6 +190,20 @@ class Robot: public IterativeRobot
 		if(armStopped){
 			arm.Set(0.0);
 		}
+	}
+	void ScaleControl(){
+		bool scaleStickUp = launchPad.GetRawButton(5);
+		bool scaleStickDown = launchPad.GetRawButton(7);
+		if(scaleStickUp){
+			tapeDrive.Set(1);
+		}else if(!scaleStickUp){
+			tapeDrive.Set(0);
+		}if(scaleStickDown){
+			winchDrive.Set(1);
+		}else if(!scaleStickDown){
+			winchDrive.Set(0);
+		}
+
 	}
 		//drives the arm motor to a setpoint
 	void MoveArmToSetPoint(int setPoint){
