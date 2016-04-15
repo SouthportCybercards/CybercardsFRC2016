@@ -33,6 +33,7 @@ class Robot: public IterativeRobot
     SendableChooser *chooser;
     const std::string autoNameDefault = "Default";
     const std::string lowBarAuto = "Low Bar";
+    const std::string lowBarScoringAuto = "Low Bar Scoring";
     const std::string porkCutletAuto = "Pork Cutlet";
     const std::string cheesyFriesAuto = "Cheesy Fries Auto";
     std::string autoSelected;
@@ -64,6 +65,7 @@ class Robot: public IterativeRobot
         chooser = new SendableChooser();
         chooser->AddDefault(autoNameDefault, (void*)&autoNameDefault);
         chooser->AddObject(lowBarAuto, (void*)&lowBarAuto);
+        chooser->AddObject(lowBarScoringAuto, (void*)&lowBarScoringAuto);
         chooser->AddObject(porkCutletAuto, (void*)&porkCutletAuto);
         chooser->AddObject(cheesyFriesAuto, (void*)&cheesyFriesAuto);
         SmartDashboard::PutData("Auto Modes", chooser);
@@ -95,17 +97,28 @@ class Robot: public IterativeRobot
             }else if(currentTime < 5.5){//was 3.5#############
 				arm.Set(0);
 				robotDrive.TankDrive(-0.6, -0.6);
-			/*}else if(currentTime < 6.5){
-				robotDrive.TankDrive(1, -1);//turn right
-			}else if(currentTime < 8.5){  				(needs testing!)
-				robotDrive.TankDrive(-0.7, -0.7);
-			}else if(currentTime < 11.0){
-				ballIntake.Set(-1.0);*/
 			}else{
 				robotDrive.StopMotor();
-				//ballIntake.Set(0);
             }
-        }else if(autoSelected == porkCutletAuto){
+        }else if(autoSelected == lowBarScoringAuto){
+			float currentTime = autoTimer.Get();
+			if(currentTime < 2.0){
+				arm.Set(-0.1);
+			}else if(currentTime < 5.07){// 3.07 s#############
+				arm.Set(0);
+				robotDrive.TankDrive(0.6, 0.6);
+			}else if(currentTime < 5.302){ // 0.232 s
+				robotDrive.TankDrive(1, 0);//turn right
+			}else if(currentTime < 7.212){  	//1.91 s
+				robotDrive.TankDrive(0.6, 0.6);
+			}else if(currentTime < 9){
+				robotDrive.StopMotor();
+				ballIntake.Set(-1.0);
+			}else{
+				robotDrive.StopMotor();
+				ballIntake.Set(0);
+			}
+		}else if(autoSelected == porkCutletAuto){
             //Pork Cutlet here
             float currentTime = autoTimer.Get();
             if(currentTime < 1.0){
@@ -164,7 +177,7 @@ class Robot: public IterativeRobot
 				//if joystick back(positive value)
 				if(armStick2){
 					arm.Set(0.5);//drive arm up prev 0.7
-					}else if(armStick1){
+				}else if(armStick1){
 					arm.Set(-0.2);//drive arm down prev 0
 				}
 				setPoint = armEncoder->GetRaw();
@@ -188,21 +201,20 @@ class Robot: public IterativeRobot
 	}
 		//drives the arm motor to a setpoint
 	void MoveArmToSetPoint(int setPoint){
+		int clampValue = 12;
 		int armEncoderRaw = armEncoder->GetRaw();
 		//if encoder is too high, we need to drive arm up
 		//if encoder is too low, we need to drive down
 		int difference = armEncoderRaw - setPoint; // The difference; it will be positive if
 		//arm needs to go up, negative if arm needs to go down e.g. enc 99- set 98 = 1 delta or -98 - -97 = -1 delta
-		difference = std::min(difference, 12);
-		difference = std::max(difference, -12); //clamping values to -12(needs tweaking)
-		int speed = (difference / 20); //will return value between -0.6 to 0.6 proportional to
+		difference = std::min(difference, clampValue);
+		difference = std::max(difference, -clampValue); //clamping values to -12(needs tweaking)
+		float speed = (difference / (clampValue * 1.66)); //will return value between -0.6 to 0.6 proportional to
 		//int speed = 0.262 * std::cbrt(difference);
 		//the difference
 		//This equation can be replaced by the equation (0.262 * cuberoot(x))
-
-
-
-
+		std::cout << "Arm Speed " << speed << std::endl;
+		arm.Set(speed);
 	}
     void TestPeriodic()
     {
