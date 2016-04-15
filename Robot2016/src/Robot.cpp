@@ -14,8 +14,7 @@ class Robot: public IterativeRobot
 		armPushTimer(),
 		defenseTimer(),
 		arm(3),
-		ballIntake(4),
-		touchSensor(2)
+		ballIntake(4)
     {
     	//ROBOT CONSTRUCTOR
         robotDrive.SetExpiration(0.1);
@@ -44,7 +43,6 @@ class Robot: public IterativeRobot
     Timer armPushTimer;
     Timer defenseTimer;
     Talon arm, ballIntake;
-    DigitalInput touchSensor;
     int setPoint = 0;
     int encoderZero = 0;
     bool armStopped = false;
@@ -103,17 +101,17 @@ class Robot: public IterativeRobot
         }else if(autoSelected == lowBarScoringAuto){
 			float currentTime = autoTimer.Get();
 			if(currentTime < 2.0){
-				arm.Set(-0.1);
-			}else if(currentTime < 5.07){// 3.07 s#############
+				arm.Set(-0.3);
+			}else if(currentTime < 6.07){// 3.07 s#############
 				arm.Set(0);
 				robotDrive.TankDrive(0.6, 0.6);
-			}else if(currentTime < 5.302){ // 0.232 s
+			}else if(currentTime < 6.302){ // 0.232 s
 				robotDrive.TankDrive(1, 0);//turn right
-			}else if(currentTime < 7.212){  	//1.91 s
+			}else if(currentTime < 8.212){  	//1.91 s
 				robotDrive.TankDrive(0.6, 0.6);
-			}else if(currentTime < 9){
+			}else if(currentTime < 12){
 				robotDrive.StopMotor();
-				ballIntake.Set(-1.0);
+				ballIntake.Set(1.0);
 			}else{
 				robotDrive.StopMotor();
 				ballIntake.Set(0);
