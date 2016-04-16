@@ -100,17 +100,16 @@ class Robot: public IterativeRobot
             }
         }else if(autoSelected == lowBarScoringAuto){
 			float currentTime = autoTimer.Get();
-			if(currentTime < 2.0){
+			if(currentTime < 2.0){ // arm down
 				arm.Set(-0.3);
-			}else if(currentTime < 6.07){// 3.07 s#############
+			}else if(currentTime < 5.77){//driving forward
 				arm.Set(0);
 				robotDrive.TankDrive(0.6, 0.6);
-			}else if(currentTime < 6.302){ // 0.232 s
-				robotDrive.TankDrive(1, 0);//turn right
-			}else if(currentTime < 8.212){  	//1.91 s
-				robotDrive.TankDrive(0.6, 0.6);
-			}else if(currentTime < 12){
-				robotDrive.StopMotor();
+			}else if(currentTime < 6.002){ // 0.232 s of turning
+				robotDrive.TankDrive(1, 0);
+			}else if(currentTime < 8.412){
+				robotDrive.TankDrive(0.75, 0.75);
+			}else if(currentTime < 9.7){
 				ballIntake.Set(1.0);
 			}else{
 				robotDrive.StopMotor();
@@ -125,12 +124,23 @@ class Robot: public IterativeRobot
                 CrossPorkCutlet();
             }
         }else if(autoSelected == cheesyFriesAuto){
-            float currentTime = autoTimer.Get();
-            if(currentTime < 1.0){
-                arm.Set(0.2);
-            }else{
-                CrossCheesyFries();
-            }
+        	float currentTime = autoTimer.Get();
+        	if(currentTime < 2.0){
+        		arm.Set(0.2);
+        	}else if(currentTime < 2.53){
+				robotDrive.TankDrive(0.5, 0.5);
+			}else if(currentTime < 4.53){
+				arm.Set(-0.2);
+				robotDrive.StopMotor();
+			}else if(currentTime < 4.63){
+				robotDrive.TankDrive(-0.5, -0.5);
+			}else if(currentTime < 5.88){
+				robotDrive.TankDrive(1.0, 1.0);
+				arm.Set(0);
+			}else{
+				robotDrive.StopMotor();
+				defenseTimer.Reset();
+			}
         } else {
             float currentTime = autoTimer.Get();
             if(currentTime < 2){
@@ -243,17 +253,19 @@ class Robot: public IterativeRobot
 		float currentTime = defenseTimer.Get();
 		if(currentTime == 0.0){
 			defenseTimer.Start();
-		}else if(currentTime < 0.8){
+		}else if(currentTime < 0.53){
 			robotDrive.Drive(0.5, 0.5);
-		}else if(currentTime < 1.5){
+		}else if(currentTime < 2.53){
 			arm.Set(-0.2);
 			robotDrive.StopMotor();
-		}else if(currentTime < 2.75){
+		}else if(currentTime < 2.63){
+			robotDrive.Drive(-0.5, -0.5);
+		}else if(currentTime < 3.88){
 			robotDrive.Drive(1.0, 1.0);
+			arm.Set(0);
 		}else{
 			robotDrive.StopMotor();
 			defenseTimer.Reset();
-			autoTimer.Reset();
 		}
 	}
 	void CrossPorkCutlet(){
