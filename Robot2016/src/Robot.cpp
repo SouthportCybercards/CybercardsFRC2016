@@ -105,11 +105,11 @@ class Robot: public IterativeRobot
 			}else if(currentTime < 5.77){//driving forward
 				arm.Set(0);
 				robotDrive.TankDrive(0.6, 0.6);
-			}else if(currentTime < 6.002){ // 0.232 s of turning
+			}else if(currentTime < 6.149){ // 0.232 s of turning
 				robotDrive.TankDrive(1, 0);
-			}else if(currentTime < 8.412){
+			}else if(currentTime < 8.552){
 				robotDrive.TankDrive(0.75, 0.75);
-			}else if(currentTime < 9.7){
+			}else if(currentTime < 9.84){
 				ballIntake.Set(1.0);
 			}else{
 				robotDrive.StopMotor();
