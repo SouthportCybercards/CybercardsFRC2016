@@ -125,21 +125,20 @@ class Robot: public IterativeRobot
             }
         }else if(autoSelected == cheesyFriesAuto){
         	float currentTime = autoTimer.Get();
-        	if(currentTime < 2.0){
+        	if(currentTime < 2.0){//#############arm up
         		arm.Set(0.2);
-        	}else if(currentTime < 2.53){
+        	}else if(currentTime < 2.53){//##########forward
 				robotDrive.TankDrive(0.5, 0.5);
-			}else if(currentTime < 4.53){
+			}else if(currentTime < 4.53){//#########arm down
 				arm.Set(-0.2);
 				robotDrive.StopMotor();
-			}else if(currentTime < 4.63){
+			}else if(currentTime < 4.63){//###########tiny flinch in reverse, adjustments will be needed, arm KEEPAS GOING DOWN
 				robotDrive.TankDrive(-0.5, -0.5);
-			}else if(currentTime < 5.88){
+			}else if(currentTime < 5.88){//##then gun it right quick
 				robotDrive.TankDrive(1.0, 1.0);
 				arm.Set(0);
 			}else{
 				robotDrive.StopMotor();
-				defenseTimer.Reset();
 			}
         } else {
             float currentTime = autoTimer.Get();
