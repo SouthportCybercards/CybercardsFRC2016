@@ -161,7 +161,7 @@ class Robot: public IterativeRobot
 		float yAxis2 = DeadZone(yAxis2Raw, driveThreshold, 0.0f);
 		robotDrive.TankDrive(-yAxis1,-yAxis2); // drive
 		BallIntake();
-		ScaleControl();
+		NEMOControl();
 		//read arm input buttons
 		//Drive arm to set point
 		if(!pushArmButton && !armStopped){
@@ -191,17 +191,30 @@ class Robot: public IterativeRobot
 			arm.Set(0.0);
 		}
 	}
-	void ScaleControl(){
-		bool scaleStickUp = launchPad.GetRawButton(5);
-		bool scaleStickDown = launchPad.GetRawButton(7);
-		if(scaleStickUp){
+	/*
+	 * N ew
+	 * E scalation
+	 * M odule
+	 * O utcome
+	 *
+	 * basically scaling mechanism
+	 */
+	void NEMOControl(){
+		bool nemoStickUp = launchPad.GetRawButton(5);
+		bool nemoStickDown = launchPad.GetRawButton(7);
+		if(nemoStickUp){
 			tapeDrive.Set(1);
-		}else if(!scaleStickUp){
+		}else if(!nemoStickUp && !nemoStickDown){
 			tapeDrive.Set(0);
-		}if(scaleStickDown){
+		}else if(nemoStickDown){
 			winchDrive.Set(1);
-		}else if(!scaleStickDown){
+			tapeDrive.Set(-1);
+		}else if(!nemoStickDown){
 			winchDrive.Set(0);
+		}else{//#########just for safety#########
+			winchDrive.Set(0);
+			tapeDrive.Set(0);
+
 		}
 
 	}
