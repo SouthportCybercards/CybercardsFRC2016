@@ -94,9 +94,11 @@ class Robot: public IterativeRobot
     {
         if(autoSelected == lowBarAuto){
             float currentTime = autoTimer.Get();
-            if(currentTime < 2.0){
+            if(currentTime < 0.25){
+            	arm.Set(0.3);
+        	}else if(currentTime < 2.25){
                 arm.Set(-0.1);
-            }else if(currentTime < 5.5){//was 3.5#############
+            }else if(currentTime < 5.75){//was 3.5#############
 				arm.Set(0);
 				robotDrive.TankDrive(-0.6, -0.6);
 			/*}else if(currentTime < 6.5){
@@ -112,26 +114,32 @@ class Robot: public IterativeRobot
         }else if(autoSelected == porkCutletAuto){
             //Pork Cutlet here
             float currentTime = autoTimer.Get();
-            if(currentTime < 1.0){
+            if(currentTime < 0.25){
+               arm.Set(0.3);
+            }else if(currentTime < 1.25){
                 arm.Set(-0.1);
             }else{
                 CrossPorkCutlet();
             }
         }else if(autoSelected == cheesyFriesAuto){
             float currentTime = autoTimer.Get();
-            if(currentTime < 1.0){
+            if(currentTime < 0.25){
+			   arm.Set(0.3);
+			}else if(currentTime < 1.25){
                 arm.Set(0.2);
             }else{
                 CrossCheesyFries();
             }
         } else {
             float currentTime = autoTimer.Get();
-            if(currentTime < 2){
+            if(currentTime < 0.25){
+			    arm.Set(0.3);
+			}else if(currentTime < 2.25){
                 arm.Set(-0.1);
-            }else if(currentTime < 3.5){
+            }else if(currentTime < 3.75){
                 arm.Set(0);
                 robotDrive.TankDrive(-1.0, -1.0);
-            }else if(currentTime < 4.5){
+            }else if(currentTime < 4.75){
                 robotDrive.TankDrive(-0.5, -0.5);
             }else{
             robotDrive.StopMotor();
@@ -259,12 +267,12 @@ class Robot: public IterativeRobot
 		float currentTime = defenseTimer.Get();
 		if(currentTime == 0.0){
 			defenseTimer.Start();
-		}else if(currentTime < 0.8){
+		}else if(currentTime < 1.05){
 			robotDrive.Drive(0.5, 0.5);
-		}else if(currentTime < 1.5){
+		}else if(currentTime < 1.75){
 			arm.Set(-0.2);
 			robotDrive.StopMotor();
-		}else if(currentTime < 2.75){
+		}else if(currentTime < 3.0){
 			robotDrive.Drive(1.0, 1.0);
 		}else{
 			robotDrive.StopMotor();
@@ -276,10 +284,10 @@ class Robot: public IterativeRobot
 		float currentTime = defenseTimer.Get();
 		if(currentTime == 0.0){
 			defenseTimer.Start();
-		}else if(currentTime < 2.0){
+		}else if(currentTime < 2.25){
 			robotDrive.Drive(0.3, 0.3);
 			ballIntake.Set(-1);
-		}else if(currentTime < 3.5){
+		}else if(currentTime < 3.75){
 			robotDrive.Drive(1.0, 1.0);
 		}else{
 			robotDrive.StopMotor();
