@@ -106,14 +106,14 @@ class Robot: public IterativeRobot
 	}
 	void TeleopPeriodic()
 	{
-		bool pushArmButton = guitar.GetRawButton(7);//changed to nonexistent button
+		bool pushArmButton = guitar.GetRawButton(1);//changed to yellow
 		//Local declarations
 		float driveThreshold = 0.005;
 		//Get the y-axis of the joystick
 		float yAxis1Raw = demoVar * leftStick.GetY();
 		float yAxis2Raw = demoVar * rightStick.GetY();
-		bool armStick1 = guitar.GetRawButton(7);//changed to nonexistant button
-		bool armStick2 = guitar.GetRawButton(7);//same fam
+		bool armStick1 = guitar.GetPOV(315);//changed to strum up
+		bool armStick2 = guitar.GetPOV(225);//changed to strum down
 		//Drive the drive motors when any input is within -driveThreshold of 0.0
 		//NOTE - currently this doesn't scale up the input from 0.0 after the deadband region -- it just uses the raw value.
 		float yAxis1 = DeadZone(yAxis1Raw, driveThreshold, 0.0f);
@@ -138,7 +138,7 @@ class Robot: public IterativeRobot
 			}
 		}
 		stopArmButtonPrevious = stopArmButton;
-		stopArmButton = guitar.GetRawButton(7);//cgd to nonexistant button
+		stopArmButton = guitar.GetRawButton(10);//cgd to guitar start
 		//armstopped starts out false. turn it to true if the button goes from false to true(button press),
 		if(stopArmButtonPrevious == false && stopArmButton == true){
 			armStopped = !armStopped;
@@ -159,8 +159,8 @@ class Robot: public IterativeRobot
 	 * basically scaling mechanism
 	 */
 	void NEMOControl(){
-		bool nemoStickUp = guitar.GetRawButton(7);//they dont exist
-		bool nemoStickDown = guitar.GetRawButton(7);//^^
+		bool nemoStickUp = guitar.GetRawButton(3);//guitar blue
+		bool nemoStickDown = guitar.GetRawButton(4);//^^ orange
 		if(nemoStickUp){
 			tapeDrive.Set(1);
 		}else if(!nemoStickUp && !nemoStickDown){
@@ -249,3 +249,42 @@ class Robot: public IterativeRobot
 };
 
 START_ROBOT_CLASS(Robot);
+
+//           :+'`
+//        +++++#+
+//        .##++++#
+//         @@##+++
+//          @###+++          o
+//          `#+++'+                                     IT'S DAT BOI!
+//          ,++++'+;
+//         `+#++++'+
+//      `'++##++++++`
+//    ;'++## #++++#'+'
+//  ;+#@;    #+++++'#
+//'@@        +++++'+'
+//           ##++#++'
+//           +######+`
+//          :+######'+
+//          +#######++:
+//         ;###@#+@#++#
+//        `####@#:: +++
+//        +#    +   #+#
+//        +#,   ,   `+#
+//        ;+#   ,    ++
+//         :+; ;'   ++;
+//           +@@:#: ++,
+//          ##:+;@#'++
+//         +'.@+;.##+#
+//        ++ . #; ##+#
+//        ++; '+'`.++
+//       ;+  ',+',:+++
+//       #;,` ;++' +##
+//       +' `+++#,:+##
+//       +'.'@.+'#`#@#
+//       ++. ,.+:.'@#'
+//       #' ' ':+ + #,
+//       '+  +  ;.: +
+//        #@`+' ': ##
+//        ##; ' ;;++
+//         ##@' ###,'
+//          @###@#
