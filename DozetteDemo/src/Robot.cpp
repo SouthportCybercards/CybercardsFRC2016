@@ -1,4 +1,4 @@
-#include "WPILib.h"	;
+#include "WPILib.h"
 class Robot: public IterativeRobot
 {
     public:
@@ -94,63 +94,7 @@ class Robot: public IterativeRobot
     }
     void AutonomousPeriodic()
     {
-        if(autoSelected == lowBarAuto){
-            float currentTime = autoTimer.Get();
-            if(currentTime < 0.25){
-            	arm.Set(0.3);
-        	}else if(currentTime < 2.25){
-                arm.Set(-0.1);
-            }else if(currentTime < 5.75){//was 3.5#############
-				arm.Set(0);
-				robotDrive.TankDrive(-0.6, -0.6);
-			/*}else if(currentTime < 6.5){
-				robotDrive.TankDrive(1, -1);//turn right
-			}else if(currentTime < 8.5){  				(needs testing!)
-				robotDrive.TankDrive(-0.7, -0.7);
-			}else if(currentTime < 11.0){
-				ballIntake.Set(-1.0);*/
-			}else{
-				robotDrive.StopMotor();
-				//ballIntake.Set(0);
-            }
-        }else if(autoSelected == porkCutletAuto){
-            //Pork Cutlet here
-            float currentTime = autoTimer.Get();
-            if(currentTime < 0.25){
-               arm.Set(0.3);
-            }else if(currentTime < 1.25){
-                arm.Set(-0.1);
-            }else{
-                CrossPorkCutlet();
-            }
-        }else if(autoSelected == cheesyFriesAuto){
-            float currentTime = autoTimer.Get();
-            if(currentTime < 0.25){
-			   arm.Set(0.3);
-			}else if(currentTime < 1.25){
-                arm.Set(0.2);
-            }else{
-                CrossCheesyFries();
-            }
-        } else {
-            float currentTime = autoTimer.Get();
-            if(currentTime < 0.25){
-			    arm.Set(0.3);
-			}else if(currentTime < 2.25){
-                arm.Set(-0.1);
-            }else if(currentTime < 3.75){
-                arm.Set(0);
-                robotDrive.TankDrive(-1.0, -1.0);
-            }else if(currentTime < 4.75){
-                robotDrive.TankDrive(-0.5, -0.5);
-            }else{
-            robotDrive.StopMotor();
-            }
-        }
-        //end all the autos
-        if(autoTimer > 15){
-        	autoTimer.Reset();
-        }
+
     }
 	void TeleopInit()
 	{
